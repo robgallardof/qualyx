@@ -51,53 +51,86 @@ fn parse(mut r: ureq::http::Response<ureq::Body>) -> Result<Value> {
     Ok(v["value"].clone())
 }
 
+fn parse_post(base: &str, path: &str, body: Value) -> Result<Value> {
+    parse(
+        agent()
+            .post(&format!("{base}{path}"))
+            .header("content-type", "application/json")
+            .send(body.to_string())
+            .map_err(err)?,
+    )
+}
+
+/// Starts safaridriver on a fresh port and opens a session; the driver is stopped on failure.
+fn start_session() -> Result<(Child, String, String)> {
+    let port = free_port()?;
+    let mut child = Command::new("safaridriver")
+        .args(["-p", &port.to_string()])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| err(format!("cannot start safaridriver: {e}")))?;
+    let base = format!("http://127.0.0.1:{port}");
+    let ready = wait_until(Duration::from_secs(30), || {
+        Ok(agent().get(&format!("{base}/status")).call().is_ok())
+    })?;
+    let session = if ready {
+        parse_post(
+            &base,
+            "/session",
+            json!({"capabilities": {"alwaysMatch": {"browserName": "safari"}}}),
+        )
+        .and_then(|v| {
+            v["sessionId"]
+                .as_str()
+                .map(str::to_string)
+                .ok_or_else(|| err("no sessionId"))
+        })
+    } else {
+        Err(err(
+            "safaridriver did not start (run `safaridriver --enable` once)",
+        ))
+    };
+    match session {
+        Ok(session) => Ok((child, base, session)),
+        Err(e) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            Err(e)
+        }
+    }
+}
+
 impl Safari {
     pub fn launch() -> Result<Safari> {
         let session_guard = SAFARI_SESSION
             .lock()
             .map_err(|_| err("Safari session lock poisoned"))?;
-        let port = free_port()?;
-        let child = Command::new("safaridriver")
-            .args(["-p", &port.to_string()])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|e| err(format!("cannot start safaridriver: {e}")))?;
-        let base = format!("http://127.0.0.1:{port}");
-        let ready = wait_until(Duration::from_secs(15), || {
-            Ok(agent().get(&format!("{base}/status")).call().is_ok())
-        })?;
-        if !ready {
-            return Err(err(
-                "safaridriver did not start (run `safaridriver --enable` once)",
-            ));
+        // On busy CI runners safaridriver can be slow to listen, or Safari can still be
+        // releasing the previous session. Retry with a fresh driver and port.
+        let mut last = err("safaridriver did not start");
+        for attempt in 0..3 {
+            if attempt > 0 {
+                std::thread::sleep(Duration::from_secs(2));
+            }
+            match start_session() {
+                Ok((child, base, session)) => {
+                    return Ok(Safari {
+                        child,
+                        base,
+                        session,
+                        _session_guard: session_guard,
+                    });
+                }
+                Err(e) => last = e,
+            }
         }
-        let mut s = Safari {
-            child,
-            base,
-            session: String::new(),
-            _session_guard: session_guard,
-        };
-        let v = s.post(
-            "/session",
-            json!({"capabilities": {"alwaysMatch": {"browserName": "safari"}}}),
-        )?;
-        s.session = v["sessionId"]
-            .as_str()
-            .ok_or_else(|| err("no sessionId"))?
-            .to_string();
-        Ok(s)
+        Err(last)
     }
 
     fn post(&self, path: &str, body: Value) -> Result<Value> {
-        parse(
-            agent()
-                .post(&format!("{}{path}", self.base))
-                .header("content-type", "application/json")
-                .send(body.to_string())
-                .map_err(err)?,
-        )
+        parse_post(&self.base, path, body)
     }
 
     fn get(&self, path: &str) -> Result<Value> {
