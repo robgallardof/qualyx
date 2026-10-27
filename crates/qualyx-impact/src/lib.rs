@@ -340,27 +340,65 @@ fn rust_global(file: &str) -> bool {
     ) || file.starts_with(".cargo/")
 }
 
+/// Rust sources under each package dir (excluding build output), read once per analysis.
+fn package_sources(root: &Path, p: &Package) -> String {
+    fn walk(dir: &Path, out: &mut String) {
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        for e in entries.flatten() {
+            let path = e.path();
+            let name = e.file_name().to_string_lossy().into_owned();
+            if path.is_dir() {
+                if name != "target" && !name.starts_with('.') {
+                    walk(&path, out);
+                }
+            } else if name.ends_with(".rs") {
+                out.push_str(&fs::read_to_string(&path).unwrap_or_default());
+                out.push('\n');
+            }
+        }
+    }
+    let mut out = String::new();
+    walk(&root.join(&p.dir), &mut out);
+    out
+}
+
+/// Does a string literal in `src` mention `key` as a whole path component?
+fn mentions(src: &str, key: &str) -> bool {
+    src.match_indices(key).any(|(i, _)| {
+        let before = src[..i].chars().next_back();
+        let after = src[i + key.len()..].chars().next();
+        let boundary = |c: Option<char>| c.is_none_or(|c| matches!(c, '/' | '\\' | '"' | '.'));
+        if !(boundary(before) && boundary(after)) {
+            return false;
+        }
+        // Inside a string literal: an odd number of quotes earlier on the same line.
+        let line_start = src[..i].rfind('\n').map_or(0, |n| n + 1);
+        src[line_start..i].matches('"').count() % 2 == 1
+    })
+}
+
 fn rust_impact(root: &Path, files: &[&str]) -> EcosystemImpact {
     let mut reasons = Vec::new();
-    let relevant: Vec<&str> = files
+    let (code, data): (Vec<&str>, Vec<&str>) = files
         .iter()
         .copied()
-        .filter(|f| has_ext(f, Ecosystem::Rust) || !f.contains('.'))
-        .collect();
-    if relevant.is_empty() {
-        return impact(
-            Ecosystem::Rust,
-            Scope::Skip,
-            "exact",
-            vec!["no Rust sources or manifests changed".into()],
-        );
-    }
-    if let Some(g) = relevant.iter().find(|f| rust_global(f)) {
+        .partition(|f| has_ext(f, Ecosystem::Rust));
+    if let Some(g) = code.iter().find(|f| rust_global(f)) {
         return impact(
             Ecosystem::Rust,
             Scope::All,
             "fallback",
             vec![format!("{g} affects every package")],
+        );
+    }
+    if code.is_empty() && data.is_empty() {
+        return impact(
+            Ecosystem::Rust,
+            Scope::Skip,
+            "exact",
+            vec!["no Rust-relevant files changed".into()],
         );
     }
     let packages = match cargo_packages(root) {
@@ -374,8 +412,9 @@ fn rust_impact(root: &Path, files: &[&str]) -> EcosystemImpact {
             );
         }
     };
+    let mut confidence = "exact";
     let mut seeds = BTreeSet::new();
-    for f in &relevant {
+    for f in &code {
         match owner(&packages, f) {
             Some(p) => {
                 reasons.push(format!("{f} -> {}", p.name));
@@ -391,25 +430,44 @@ fn rust_impact(root: &Path, files: &[&str]) -> EcosystemImpact {
             }
         }
     }
-    let all = with_dependents(&packages, &seeds);
-    let added: Vec<&String> = all.difference(&seeds).collect();
-    if !added.is_empty() {
-        reasons.push(format!(
-            "dependents: {}",
-            added
+    // Data files (fixtures, snapshots, configs) matter to the packages whose code names them.
+    if !data.is_empty() {
+        let sources: Vec<(&Package, String)> = packages
+            .iter()
+            .map(|p| (p, package_sources(root, p)))
+            .collect();
+        for f in &data {
+            let first = f.split('/').next().unwrap_or(f);
+            let file = f.rsplit('/').next().unwrap_or(f);
+            let users: Vec<&str> = sources
                 .iter()
-                .map(|s| s.as_str())
-                .collect::<Vec<_>>()
-                .join(", ")
-        ));
+                .filter(|(_, src)| mentions(src, first) || mentions(src, file))
+                .map(|(p, _)| p.name.as_str())
+                .collect();
+            if users.is_empty() {
+                reasons.push(format!("{f}: not referenced by any Rust package"));
+            } else {
+                confidence = "heuristic";
+                reasons.push(format!("{f} referenced by {}", users.join(", ")));
+                seeds.extend(users.into_iter().map(String::from));
+            }
+        }
+    }
+    if seeds.is_empty() {
+        return impact(Ecosystem::Rust, Scope::Skip, confidence, reasons);
+    }
+    let all = with_dependents(&packages, &seeds);
+    let added: Vec<&str> = all.difference(&seeds).map(String::as_str).collect();
+    if !added.is_empty() {
+        reasons.push(format!("dependents: {}", added.join(", ")));
     }
     if all.len() == packages.len() {
-        return impact(Ecosystem::Rust, Scope::All, "exact", reasons);
+        return impact(Ecosystem::Rust, Scope::All, confidence, reasons);
     }
     impact(
         Ecosystem::Rust,
         Scope::Packages(all.into_iter().collect()),
-        "exact",
+        confidence,
         reasons,
     )
 }
@@ -684,6 +742,48 @@ mod tests {
         );
         assert_eq!(plan.ecosystems[0].scope, Scope::Skip);
         assert!(plan.apply(&rust_profile(d.path())).ecosystems.is_empty());
+    }
+
+    #[test]
+    fn data_files_select_the_packages_that_reference_them() {
+        let d = workspace();
+        fs::create_dir_all(d.path().join("other/tests")).unwrap();
+        fs::write(
+            d.path().join("other/tests/it.rs"),
+            "const F: &str = \"../fixtures/sample.json\";\n",
+        )
+        .unwrap();
+        fs::create_dir_all(d.path().join("fixtures")).unwrap();
+        fs::write(d.path().join("fixtures/sample.json"), "{}").unwrap();
+        fs::write(d.path().join("unused.json"), "{}").unwrap();
+        let plan = analyze(
+            &rust_profile(d.path()),
+            changed_since_git(d.path(), "HEAD").unwrap(),
+            "git",
+        );
+        let e = &plan.ecosystems[0];
+        assert_eq!(
+            e.scope,
+            Scope::Packages(vec!["other".into()]),
+            "{:?}",
+            e.reasons
+        );
+        assert_eq!(e.confidence, "heuristic");
+        assert!(
+            e.reasons
+                .iter()
+                .any(|r| r.contains("unused.json: not referenced")),
+            "{:?}",
+            e.reasons
+        );
+    }
+
+    #[test]
+    fn mention_requires_a_string_literal_and_path_boundary() {
+        assert!(mentions("let p = \"../../fixtures\";", "fixtures"));
+        assert!(mentions("join(\"fixtures/x.py\")", "fixtures"));
+        assert!(!mentions("mod tests;", "tests"));
+        assert!(!mentions("let s = \"myfixtures\";", "fixtures"));
     }
 
     #[test]
