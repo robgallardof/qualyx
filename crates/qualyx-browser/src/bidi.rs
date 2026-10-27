@@ -27,6 +27,11 @@ pub struct Bidi {
     failures: Vec<String>,
 }
 
+/// Firefox's startup window was swapped out under the call ("no such frame").
+fn is_discarded(e: &crate::BrowserError) -> bool {
+    e.to_string().contains("no such frame")
+}
+
 /// BiDi RemoteValue -> plain JSON.
 pub fn remote_to_json(v: &Value) -> Value {
     match v["type"].as_str() {
@@ -57,7 +62,22 @@ pub fn remote_to_json(v: &Value) -> Value {
 }
 
 impl Bidi {
+    /// Launch Firefox and own a fresh browsing context. A startup window that stays
+    /// discarded is not recoverable in place, so that case gets a fresh process.
     pub fn launch(path: &Path, headless: bool) -> Result<Bidi> {
+        let mut attempt = 1;
+        loop {
+            match Self::launch_once(path, headless) {
+                Err(e) if attempt < 3 && is_discarded(&e) => {
+                    attempt += 1;
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+                r => return r,
+            }
+        }
+    }
+
+    fn launch_once(path: &Path, headless: bool) -> Result<Bidi> {
         let profile = tempfile::tempdir().map_err(err)?;
         let mut args = vec![
             "--remote-debugging-port=0".to_string(),
@@ -113,11 +133,10 @@ impl Bidi {
         // explicit context instead of racing the initial getTree snapshot.
         // While that startup window is still being swapped out, create can fail
         // with "no such frame" (DiscardedBrowsingContextError); it settles quickly.
-        let mut attempt = 0;
+        let settle = Instant::now() + Duration::from_secs(10);
         let created = loop {
             match b.call("browsingContext.create", json!({"type": "window"})) {
-                Err(e) if attempt < 20 && e.to_string().contains("no such frame") => {
-                    attempt += 1;
+                Err(e) if Instant::now() < settle && is_discarded(&e) => {
                     std::thread::sleep(Duration::from_millis(250));
                 }
                 r => break r?,
