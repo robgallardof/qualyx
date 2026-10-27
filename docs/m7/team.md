@@ -77,7 +77,7 @@ The local API's listing uses `runs` for stored history, and its polling registry
 for that process. Team status survives API restarts. An accepted or finished job is not a
 passing test: check `manifest.status` (`passed`, `failed`, `error`, `inconclusive`).
 
-Install the standard-library Python SDK v0.1.0 with `python -m pip install ./sdk/python`:
+Install the standard-library Python SDK v0.1.1 with `python -m pip install ./sdk/python`:
 
 ```python
 import os
@@ -87,6 +87,10 @@ run = client.start('/projects/my-app')
 print(client.status(run['run_id']))
 # Poll until finished/failed/cancelled, then inspect manifest.status.
 ```
+
+The SDK refuses HTTP redirects, including same-origin redirects, and returns an `HTTPError`.
+Configure the final API URL directly. This prevents forwarding bearer credentials and replaying
+API requests at a server-selected destination. SDK 0.1.0 followed redirects; upgrade to 0.1.1.
 
 Project paths are canonicalized under configured roots. Workers recheck roots before execution.
 All processes need the same absolute project paths. Team queue admission is bounded to 64

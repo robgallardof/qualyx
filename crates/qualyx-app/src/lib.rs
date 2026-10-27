@@ -344,8 +344,12 @@ pub fn load_run(path: &Path, run_id: Option<&str>) -> Result<(RunManifest, PathB
     Ok((manifest, run_dir))
 }
 
+/// List history without creating state; a valid project with no index has no runs yet.
 pub fn list_runs(path: &Path, limit: u32) -> Result<Vec<RunSummary>> {
     let root = discover(path)?.root;
+    if !qualyx_store::index_exists(&Layout::new(&root)) {
+        return Ok(Vec::new());
+    }
     let (_, mut store) = open_store(&root)?;
     Ok(store.list_runs(limit)?)
 }

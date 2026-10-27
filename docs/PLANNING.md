@@ -1,6 +1,8 @@
 # Qualyx — Implementation Planning
 
-Status: proposed design, not yet implemented. Dates and effort estimates deliberately omitted until team size, supported clients and pilot scope are agreed.
+Status: original product design and acceptance baseline. Implemented subsets and executed
+checks are tracked in [STATUS](STATUS.md); outstanding scope is tracked in [READINESS](READINESS.md).
+This plan is not a claim that every listed integration has shipped.
 
 ## Definition of product
 Universal Rust-first QA execution/orchestration platform, available as CLI + MCP + optional API/desktop host/dashboard, supporting deterministic and optional agentic execution.

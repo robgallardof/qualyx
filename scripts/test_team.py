@@ -78,6 +78,8 @@ def stop(process):
 
 
 def main():
+    # Container logs can contain Unicode even when Windows redirects stdout using cp1252.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     suffix = str(os.getpid())
     pg, s3 = "qualyx-team-pg-" + suffix, "qualyx-team-s3-" + suffix
     processes, logs = [], []
@@ -95,7 +97,8 @@ def main():
                        QUALYX_S3_BUCKET="evidence", QUALYX_S3_ENDPOINT=f"http://127.0.0.1:{port(s3, '8333/tcp')}",
                        QUALYX_S3_ACCESS_KEY="qualyx-test", QUALYX_S3_SECRET_KEY="qualyx-local-s3-secret", QUALYX_S3_ALLOW_HTTP="1")
             deadline = time.monotonic() + 60
-            while subprocess.run(["docker", "exec", pg, "pg_isready", "-U", "postgres"], capture_output=True).returncode:
+            # The init-only PostgreSQL server accepts Unix sockets before TCP is ready.
+            while subprocess.run(["docker", "exec", pg, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], capture_output=True).returncode:
                 assert time.monotonic() < deadline, "PostgreSQL startup timeout"
                 time.sleep(0.25)
             while True:

@@ -1,9 +1,16 @@
-"""Qualyx HTTP v1 client, SDK version 0.1.0. Python standard library only."""
+"""Qualyx HTTP v1 client, SDK version 0.1.1. Python standard library only."""
 import json
 from urllib.parse import urlencode, quote, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    """Never replay authenticated API calls at a server-selected destination."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class QualyxClient:
@@ -14,12 +21,13 @@ class QualyxClient:
         if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("expected an HTTP(S) API base URL without credentials, query or fragment")
         self.base_url, self.token, self.timeout = base_url.rstrip("/"), token, timeout
+        self._opener = build_opener(_NoRedirect())
 
     def _request(self, route, body=None, text=False):
         req = Request(self.base_url + route,
                       data=None if body is None else json.dumps(body).encode(),
                       headers={"Authorization": "Bearer " + self.token, "Content-Type": "application/json"})
-        with urlopen(req, timeout=self.timeout) as response:
+        with self._opener.open(req, timeout=self.timeout) as response:
             payload = response.read().decode()
         return payload if text else json.loads(payload)
 

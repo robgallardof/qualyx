@@ -19,7 +19,7 @@
 
 Qualyx descubre las pruebas de un proyecto, ejecuta sus herramientas nativas y conserva la evidencia. Úsalo desde la terminal, un agente MCP o una API compartida. **La ejecución determinista no necesita un modelo de IA.**
 
-M0–M7 están implementados con el [alcance documentado](docs/STATUS.md). CI valida Windows, Linux y macOS, incluidos navegadores reales y pruebas de instalación.
+Los flujos principales están verificados con el [alcance documentado](docs/STATUS.md); el [plan completo sigue pendiente](docs/READINESS.md). CI valida Windows, Linux y macOS, incluidos navegadores reales y pruebas de instalación. Para un binario descargado, sigue la [instalación nativa](INSTALL.md).
 
 Instala Git y Rust estable, además de las herramientas nativas de tu proyecto:
 

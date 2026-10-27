@@ -1546,6 +1546,7 @@ dependencies = [
  "clap",
  "qualyx-api",
  "qualyx-app",
+ "qualyx-browser",
  "qualyx-core",
  "qualyx-desktop",
  "qualyx-discovery",

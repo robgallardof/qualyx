@@ -1,6 +1,6 @@
 Qualyx discovers a project's tests, runs its native tools and preserves the evidence. Use it from a terminal, an MCP agent or a shared API. **Deterministic execution needs no AI model.**
 
-M0–M7 are implemented within the [documented scope](docs/STATUS.md). CI validates Windows, Linux and macOS, including real browsers and installation smoke tests.
+Core workflows are verified within the [documented scope](docs/STATUS.md); the [full roadmap remains incomplete](docs/READINESS.md). CI validates Windows, Linux and macOS, including real browsers and installation smoke tests. For a downloaded binary, follow [native installation](INSTALL.md).
 
 Install Git and stable Rust, plus the native toolchain for your project:
 

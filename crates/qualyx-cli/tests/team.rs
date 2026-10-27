@@ -114,6 +114,93 @@ fn q(p: &Path) -> String {
 }
 
 #[test]
+#[ignore = "requires an installed Chromium-family browser"]
+fn dashboard_recovers_from_auth_empty_history_and_network_failure() {
+    let root = tempfile::tempdir().unwrap();
+    let project = root.path().join("app");
+    copy(&fixture("python/passing"), &project);
+    let mut server = serve(root.path());
+    let browser = qualyx_browser::detect()
+        .into_iter()
+        .find(|b| b.family == qualyx_browser::Family::Chromium)
+        .expect("installed Chromium-family browser");
+    let mut driver = qualyx_browser::launch(&browser, true).unwrap();
+    driver.navigate(&server.1).unwrap();
+    driver
+        .eval(&format!(
+            "document.getElementById('project').value = {}",
+            serde_json::to_string(&project).unwrap()
+        ))
+        .unwrap();
+
+    fn load(driver: &mut dyn qualyx_browser::Driver) -> String {
+        driver
+            .eval("document.getElementById('f').requestSubmit(); true")
+            .unwrap();
+        let start = Instant::now();
+        loop {
+            if driver
+                .eval("!document.getElementById('load').disabled")
+                .unwrap()
+                == true
+            {
+                return driver
+                    .eval("document.getElementById('msg').textContent")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string();
+            }
+            assert!(
+                start.elapsed() < Duration::from_secs(20),
+                "dashboard stuck loading"
+            );
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
+    assert_eq!(load(driver.as_mut()), "missing or invalid bearer token");
+    driver
+        .eval(&format!(
+            "document.getElementById('token').value = {}",
+            serde_json::to_string(TOKEN).unwrap()
+        ))
+        .unwrap();
+    assert_eq!(load(driver.as_mut()), "No runs found for this project.");
+    assert!(
+        Command::new(BIN)
+            .arg("test")
+            .arg(&project)
+            .output()
+            .unwrap()
+            .status
+            .success()
+    );
+    assert!(load(driver.as_mut()).contains("1 run(s) shown"));
+    assert_eq!(
+        driver
+            .eval("document.querySelectorAll('#rows tr').length")
+            .unwrap(),
+        1
+    );
+    server.0.kill().unwrap();
+    server.0.wait().unwrap();
+    assert!(load(driver.as_mut()).contains("Could not load runs"));
+    assert_eq!(
+        driver
+            .eval("document.querySelectorAll('#rows tr').length")
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        driver
+            .eval("document.getElementById('load').disabled")
+            .unwrap(),
+        false
+    );
+}
+
+#[test]
 fn refuses_missing_or_weak_tokens_on_every_bind() {
     for bind in ["0.0.0.0:0", "127.0.0.1:0"] {
         for token in [
@@ -148,6 +235,16 @@ fn api_runs_tests_with_auth_roots_and_artifacts() {
     assert_eq!(status, 200, "dashboard");
     assert_eq!(get(&format!("{}/v1/runs", s.1), None).0, 401);
     assert_eq!(get(&format!("{}/v1/runs", s.1), Some("wrong")).0, 401);
+    let (empty_status, empty_history) = get(
+        &format!("{}/v1/runs?project={}", s.1, q(&project)),
+        Some(TOKEN),
+    );
+    assert_eq!(empty_status, 200);
+    assert_eq!(empty_history["runs"], serde_json::json!([]));
+    assert!(
+        !project.join(".qualyx").exists(),
+        "history reads must not initialize state"
+    );
 
     let origin = agent()
         .get(&format!("{}/v1/runs", s.1))
@@ -321,7 +418,15 @@ fn shared_postgres_index() {
     let url = format!("postgres://postgres:qualyx@127.0.0.1:{port}/postgres");
     let t = Instant::now();
     while !Command::new("docker")
-        .args(["exec", &name, "pg_isready", "-U", "postgres"])
+        .args([
+            "exec",
+            &name,
+            "pg_isready",
+            "-h",
+            "127.0.0.1",
+            "-U",
+            "postgres",
+        ])
         .output()
         .unwrap()
         .status

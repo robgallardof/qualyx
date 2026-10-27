@@ -24,18 +24,18 @@
   <main>
     <h1>Qualyx runs</h1>
     <form id="f">
-      <input id="project" placeholder="Project path (under an allowed root)" required>
-      <input id="token" type="password" placeholder="API token (kept in this tab only)">
-      <button>Load</button>
+      <input id="project" aria-label="Project path" placeholder="Project path (under an allowed root)" required>
+      <input id="token" aria-label="API token" type="password" autocomplete="off" placeholder="API token (kept in this tab only)">
+      <button id="load">Load</button>
     </form>
-    <p id="msg"></p>
+    <p id="msg" role="status" aria-live="polite"></p>
     <table>
       <thead><tr><th>Run</th><th>Status</th><th>Passed</th><th>Failed</th><th>Total</th><th>Started</th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
   </main>
   <script>
-    // Read-only view of the HTTP API. The token never leaves this tab's sessionStorage.
+    // Read-only API view. Remember credentials only for this tab; send them in the header.
     const $ = (id) => document.getElementById(id);
     try { $("token").value = sessionStorage.getItem("qualyx-token") || ""; } catch (_) {}
     $("f").addEventListener("submit", async (e) => {
@@ -43,30 +43,41 @@
       const token = $("token").value;
       try { sessionStorage.setItem("qualyx-token", token); } catch (_) {}
       $("msg").textContent = "Loading…";
-      const r = await fetch("/v1/runs?project=" + encodeURIComponent($("project").value), {
-        headers: token ? { Authorization: "Bearer " + token } : {},
-      });
-      const body = await r.json();
-      if (!r.ok) { $("msg").textContent = body.error || r.statusText; $("rows").replaceChildren(); return; }
-      $("msg").textContent = (body.in_flight || []).length + " run(s) in flight";
-      const runs = body.runs || (body.jobs || []).map((job) => ({
-        run_id: job.run_id,
-        status: job.manifest?.status || job.state,
-        passed: job.manifest?.counts?.passed ?? "—",
-        failed: job.manifest?.counts?.failed ?? "—",
-        total: job.manifest?.counts?.total ?? "—",
-        started_at: job.manifest?.started_at || "—",
-      }));
-      $("rows").replaceChildren(...runs.map((run) => {
-        const tr = document.createElement("tr");
-        for (const [v, cls] of [[run.run_id], [run.status, run.status], [run.passed], [run.failed], [run.total], [run.started_at]]) {
-          const td = document.createElement("td");
-          td.textContent = v;
-          if (cls) td.className = cls;
-          tr.append(td);
-        }
-        return tr;
-      }));
+      $("load").disabled = true;
+      $("rows").replaceChildren();
+      try {
+        const r = await fetch("/v1/runs?project=" + encodeURIComponent($("project").value), {
+          headers: token ? { Authorization: "Bearer " + token } : {},
+          signal: AbortSignal.timeout(15000),
+          redirect: "error",
+        });
+        const body = await r.json();
+        if (!r.ok) { $("msg").textContent = body.error || r.statusText; $("rows").replaceChildren(); return; }
+        const runs = body.runs || (body.jobs || []).map((job) => ({
+          run_id: job.run_id,
+          status: job.manifest?.status || job.state,
+          passed: job.manifest?.counts?.passed ?? "—",
+          failed: job.manifest?.counts?.failed ?? "—",
+          total: job.manifest?.counts?.total ?? "—",
+          started_at: job.manifest?.started_at || "—",
+        }));
+        $("msg").textContent = runs.length === 0 ? "No runs found for this project." :
+          runs.length + " run(s) shown · " + (body.in_flight || []).length + " in flight";
+        $("rows").replaceChildren(...runs.map((run) => {
+          const tr = document.createElement("tr");
+          for (const [v, cls] of [[run.run_id], [run.status, run.status], [run.passed], [run.failed], [run.total], [run.started_at]]) {
+            const td = document.createElement("td");
+            td.textContent = v;
+            if (cls) td.className = cls;
+            tr.append(td);
+          }
+          return tr;
+        }));
+      } catch (_) {
+        $("msg").textContent = "Could not load runs. Check the API connection and try again.";
+      } finally {
+        $("load").disabled = false;
+      }
     });
   </script>
 </body>

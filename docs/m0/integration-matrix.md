@@ -65,8 +65,8 @@ Qualyx binaries. Users install them themselves, and `qualyx doctor` reports whet
 
 | Client | License | Integration surface | Status |
 |---|---|---|---|
-| Claude Code | proprietary | MCP stdio/HTTP, `CLAUDE.md` → `AGENTS.md` | planned M2 smoke test |
-| OpenAI Codex | Apache-2.0 | MCP, `AGENTS.md` | planned M2 smoke test |
+| Claude Code | proprietary | MCP stdio/HTTP, `CLAUDE.md` → `AGENTS.md` | recorded stdio smoke verified; [versions/evidence](../m2/clients.md) |
+| OpenAI Codex | Apache-2.0 | MCP, `AGENTS.md` | recorded MCP smoke verified; [versions/evidence](../m2/clients.md) |
 | OpenCode (now anomalyco/opencode) | MIT | MCP + custom providers, `AGENTS.md` | planned M2/M3 (with DeepSeek) |
 | Antigravity | proprietary | **unverified** public integration surface | investigate in M2; fallback generic MCP / CLI |
 | Cursor, Continue, Cline, Roo | various | MCP (feature-detect) | optional |

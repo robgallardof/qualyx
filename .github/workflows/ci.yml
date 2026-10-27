@@ -45,6 +45,10 @@ jobs:
         with:
           python-version: "3.13"
       - run: python -m pip install pytest==8.3.5
+      - name: Python SDK real HTTP regressions
+        run: python -m unittest discover -s sdk/python/tests -v
+      - name: Package documentation regressions
+        run: python -m unittest discover -s scripts/tests -v
       - run: cargo test --workspace --locked
         env:
           # Linux runners have a Linux container engine; Windows/macOS runners don't.
@@ -73,6 +77,14 @@ jobs:
         run: cargo test --locked -p qualyx-cli --test fixtures playwright
         env:
           QUALYX_TEST_PLAYWRIGHT: "1"
+      - name: Accessibility CLI against seeded page (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo test --locked -p qualyx-cli --test quality a11y_command_reports_seeded_violations -- --nocapture
+        env:
+          QUALYX_TEST_BROWSERS: "1"
+      - name: Dashboard real browser recovery (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo test --locked -p qualyx-cli --test team dashboard_recovers -- --ignored --nocapture
       - name: Smoke test the built binary
         shell: bash
         run: |

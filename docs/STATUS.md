@@ -2,6 +2,44 @@
 
 Last updated: 2026-10-27.
 
+**Product readiness:** the original roadmap is not fully delivered. Milestone states below
+describe tested subsets, not universal completion. See the [current readiness assessment](READINESS.md)
+for implementation gaps, verification gaps and the next increments.
+
+## Product flow review — 2026-10-27
+
+Reviewed installation/distribution, local history, dashboard, SDK/API, team acceptance,
+security and the milestone coverage. See [READINESS](READINESS.md) for remaining product gaps.
+
+- Fixed a reproduced SDK credential leak: urllib followed redirects and copied Authorization
+  to the redirected destination. SDK 0.1.1 rejects redirects (301/302/303/307/308) for both GET
+  and POST. The real two-server regression failed before the fix and passed afterwards.
+- Native packages now include tracked guides, README assets, policy documents, SDK and audit
+  skill, plus bilingual native installation instructions. Extracted documentation links are
+  validated; deleting a required image makes the regression fail. No local caches are copied.
+- Empty history is a successful empty list, without creating `.qualyx`. A real-browser test
+  caught the previous first-use error. The dashboard now handles auth errors, empty history,
+  populated history and API loss, clears stale rows, bounds requests and enables retries.
+- CI now explicitly invokes the CLI accessibility and dashboard browser regressions, plus
+  SDK HTTP and package documentation checks. Default skipped tests are not integration proof.
+- Hardened team acceptance startup to wait for PostgreSQL TCP readiness rather than its
+  temporary init socket; UTF-8 diagnostic output no longer masks failures on Windows.
+  The initial acceptance attempt failed at API database startup; a repeat passed. The final
+  TCP-readiness version also passed the complete real PostgreSQL/S3/worker acceptance run,
+  including restart, atomic claim, cancellation, lease loss and archive recovery.
+
+Executed locally: fmt, strict workspace clippy and the full workspace suite (185 passed,
+0 failed, 3 explicitly ignored); all six team Rust tests with ignored tests enabled, including
+real PostgreSQL and Chromium dashboard; real CLI accessibility against the seeded page;
+four Python SDK/package regressions; extracted Windows package smoke with pass/fail fixtures;
+SDK 0.1.1 wheel build; actionlint and pinned Readme Builder drift/link checks.
+
+The preceding security change `c34c23a` also completed
+[CI](https://github.com/robgallardof/qualyx/actions/runs/40546999740) and
+[all three packages](https://github.com/robgallardof/qualyx/actions/runs/40546999714).
+New remote CI for this flow increment, other OS desktop interaction, live LLM/provider smoke
+and independent penetration testing are **NOT EXECUTED** at this local checkpoint.
+
 ## Security audit follow-up — 2026-10-27
 
 The original M5 covered scanner execution/SARIF, not a complete audit workflow. Added
