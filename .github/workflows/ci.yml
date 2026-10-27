@@ -69,7 +69,9 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: sudo safaridriver --enable
       - name: Real browsers (installed on the runner image)
-        run: cargo test --locked -p qualyx-browser --test real_browsers -- --nocapture
+        # Safari permits one WebDriver session at a time. Keep the full browser matrix,
+        # but serialize these tests so they cannot compete for the same browser instance.
+        run: cargo test --locked -p qualyx-browser --test real_browsers -- --nocapture --test-threads=1
         env:
           QUALYX_TEST_BROWSERS: "1"
       - name: Playwright runner (Linux)

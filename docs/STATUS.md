@@ -2,6 +2,18 @@
 
 Last updated: 2026-10-27.
 
+## macOS browser CI repair — 2026-10-27
+
+Run 40551659939 passed Windows, Linux, lint, team deployment and assurance, but macOS
+failed when parallel browser regressions competed for Safari's single WebDriver session.
+Safari had already passed accessibility and smoke checks in that same job; the failing
+login flow could not start its driver. Serialize the real-browser test binary with
+`--test-threads=1`, retaining every browser, test and assertion. Apple's documented
+[single-session limit](https://developer.apple.com/documentation/webkit/about-webdriver-for-safari)
+requires this scheduling constraint. Native Safari verification requires the hosted macOS job;
+it is NOT EXECUTED locally on Windows. Local fmt, strict workspace clippy and the full
+locked workspace test suite passed. Follow-up CI results will be checked after publication.
+
 **Product readiness:** the original roadmap is not fully delivered. Milestone states below
 describe tested subsets, not universal completion. See the [current readiness assessment](READINESS.md)
 for implementation gaps, verification gaps and the next increments.
