@@ -199,7 +199,9 @@ impl Jobs {
 /// After a crash, run dirs without a manifest are evidence of interrupted runs. Record each as
 /// an `error` manifest (never a pass) so history and reports stay truthful. Returns their ids.
 pub fn recover_interrupted(project: &Path) -> Result<Vec<String>> {
-    let layout = Layout::new(project);
+    // Match discovery/index identity on /var -> /private/var and Windows short paths.
+    let project = crate::discover(project)?.root;
+    let layout = Layout::new(&project);
     let runs_dir = layout.dir.join("runs");
     let Ok(entries) = fs::read_dir(&runs_dir) else {
         return Ok(Vec::new());

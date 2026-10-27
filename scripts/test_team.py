@@ -136,10 +136,15 @@ def main():
             shutil.copytree(REPO / "fixtures/python/passing", passing)
             shutil.copytree(REPO / "fixtures/python/failing", failing)
             shutil.copytree(REPO / "fixtures/python/passing", slow)
-            (passing / "test_worker_boundary.py").write_text("import os\ndef test_service_credentials_are_not_inherited():\n    assert not any(k.startswith('QUALYX_') for k in os.environ)\n")
+            (passing / "tests/test_worker_boundary.py").write_text("import os\ndef test_service_credentials_are_not_inherited():\n    assert not any(k.startswith('QUALYX_') for k in os.environ)\n")
             (passing / ".qualyx").mkdir()
             (passing / ".qualyx/config.toml").write_text('[run]\nenv_passthrough = ["QUALYX_DATABASE_URL", "QUALYX_API_TOKEN", "QUALYX_S3_SECRET_KEY"]\n')
-            (slow / "test_slow.py").write_text("import time\ndef test_slow():\n    time.sleep(120)\n")
+            (slow / "tests/test_slow.py").write_text("import time\nfrom pathlib import Path\ndef test_slow():\n    Path('slow-started').write_text('started')\n    time.sleep(120)\n")
+            def await_slow_test():
+                deadline = time.monotonic() + 20
+                while not (slow / "slow-started").exists():
+                    assert time.monotonic() < deadline, "slow test was not collected/executed"
+                    time.sleep(0.1)
             server = api()
             client = QualyxClient(base, TOKEN)
             job = client.start(passing)["run_id"]
@@ -151,6 +156,7 @@ def main():
             workers = [start("worker", "--root", str(root), "--allow-process", "--once") for _ in range(2)]
             finished = await_state(base, job, {"finished", "failed"})
             assert finished["state"] == "finished" and finished["manifest"]["status"] == "passed", finished
+            assert any(t["name"] == "test_service_credentials_are_not_inherited" for r in finished["manifest"]["runners"] for t in r["tests"]), "credential test must be collected, not silently ignored"
             assert client.status(job)["run_id"] == job
             assert client.runs(passing)["jobs"][0]["run_id"] == job
             for worker in workers:
@@ -177,14 +183,17 @@ def main():
             active = request(base, "/v1/runs", {"project": str(slow)}, 202)["run_id"]
             worker = start("worker", "--root", str(root), "--allow-process", "--once")
             await_state(base, active, {"running"})
+            await_slow_test()
             request(base, f"/v1/runs/{active}/cancel", {}, 202)
             result = await_state(base, active, {"finished", "failed"})
             assert result["manifest"]["status"] != "passed", result
             assert worker.wait(timeout=30) == 0
 
+            (slow / "slow-started").unlink()
             interrupted = request(base, "/v1/runs", {"project": str(slow)}, 202)["run_id"]
             worker = start("worker", "--root", str(root), "--allow-process", "--once")
             await_state(base, interrupted, {"running"})
+            await_slow_test()
             stop(worker)
             result = await_state(base, interrupted, {"failed"}, timeout=25)
             assert "lease expired" in result["error"], result

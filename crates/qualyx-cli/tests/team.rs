@@ -463,7 +463,7 @@ fn simultaneous_requests_respect_capacity_and_cancel() {
     let project = root.path().join("app");
     copy(&fixture("python/passing"), &project);
     fs::write(
-        project.join("test_slow.py"),
+        project.join("tests/test_slow.py"),
         "import time\ndef test_slow():\n    time.sleep(120)\n",
     )
     .unwrap();

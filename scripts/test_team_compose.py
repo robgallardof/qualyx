@@ -32,6 +32,9 @@ def main():
         def run(*args):
             return subprocess.run([*compose, *args], env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True).stdout.strip()
 
+        def as_worker(code):
+            return run("run", "--rm", "--no-deps", "--entrypoint", "python", "worker", "-c", code)
+
         try:
             run("up", "-d", "--no-build", "--wait", "--wait-timeout", "90")
             assert run("exec", "-T", "worker", "id", "-u") == "10001", "non-root worker"
@@ -49,7 +52,7 @@ def main():
             assert result["manifest"]["status"] == "failed", result
             # Recreate every service while retaining the named database/object volumes.
             run("down", "--timeout", "30")
-            (root / "passing/.qualyx/runs" / job).rename(root / "saved-evidence")
+            as_worker("from pathlib import Path; Path('/projects/passing/.qualyx/runs/" + job + "').rename('/projects/saved-evidence')")
             run("up", "-d", "--no-build", "--wait", "--wait-timeout", "90")
             assert request(base, "/v1/runs/" + job)["manifest"]["status"] == "passed"
             xml = request(base, f"/v1/runs/{job}/artifacts/pytest.junit.xml?" + urlencode({"project": "/projects/passing"}))
@@ -59,7 +62,15 @@ def main():
             print(run("logs", "--tail", "80"))
             raise
         finally:
-            run("down", "--volumes", "--remove-orphans", "--timeout", "30")
+            try:
+                # Linux bind-mount files belong to UID 10001. Make only worker-owned
+                # disposable evidence removable before the host tempdir cleans up.
+                run("stop", "worker")
+                as_worker("import os; from pathlib import Path; "
+                          "[(p.chmod(0o777 if p.is_dir() else 0o666)) for p in Path('/projects').rglob('*') "
+                          "if not p.is_symlink() and p.stat().st_uid == os.getuid()]")
+            finally:
+                run("down", "--volumes", "--remove-orphans", "--timeout", "30")
 
 
 if __name__ == "__main__":

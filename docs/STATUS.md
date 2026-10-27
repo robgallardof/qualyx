@@ -15,6 +15,16 @@ Last updated: 2026-10-27.
 
 ## M7 durable execution, deployment and packaging — 2026-10-27
 
+CI follow-up: the first Linux acceptance run of `4374ea5` exposed a fixture mistake:
+pytest's `testpaths = ["tests"]` excluded newly written slow/credential tests at the root.
+Moved them under `tests/`, asserted the credential test appears in the native results and
+waited for the slow test's execution marker before cancellation/crash. The original assertion
+is preserved; earlier local success did not prove those extra test bodies ran.
+The same CI run also exposed non-canonical recovery identity on macOS/Windows runners
+and Linux host cleanup of UID-10001-created bind-mount evidence. Recovery now canonicalizes
+its project root; Compose acceptance moves/relaxes only disposable worker-owned evidence
+as that worker user. It keeps the non-root deployment and all original assertions.
+
 Implemented:
 
 - `serve --team` dispatches durable PostgreSQL jobs without preparing/executing projects in
