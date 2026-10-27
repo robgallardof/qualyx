@@ -26,3 +26,7 @@ determinista funciona sin ningún modelo.
   como no soportado.
 - Es seguro por defecto. Las pruebas de carga, el DAST y cualquier cosa dirigida a producción
   requieren permiso explícito.
+
+## Licencia
+
+Doble licencia: [MIT](LICENSE-MIT) o [Apache-2.0](LICENSE-APACHE), a tu elección.

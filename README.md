@@ -25,3 +25,7 @@ need a model at all.
 - It only claims something works once there's evidence for it. Unsupported features get
   documented as unsupported.
 - It's safe by default. Load, DAST and anything aimed at production need explicit permission.
+
+## License
+
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
