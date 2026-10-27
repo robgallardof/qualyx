@@ -302,3 +302,94 @@ fn container_node_passing() {
         ["skipped on purpose"]
     );
 }
+
+/// Playwright needs `npm ci` and a browser download: opt in with QUALYX_TEST_PLAYWRIGHT=1.
+fn playwright_project(kind: &str) -> Option<tempfile::TempDir> {
+    if std::env::var("QUALYX_TEST_PLAYWRIGHT").as_deref() != Ok("1") {
+        eprintln!("NOT RUN: set QUALYX_TEST_PLAYWRIGHT=1 (needs network for npm ci + browser)");
+        return None;
+    }
+    let dir = tempfile::tempdir().unwrap();
+    copy_dir(&fixture("playwright", kind), dir.path());
+    let npm = which::which("npm").unwrap();
+    let npx = which::which("npx").unwrap();
+    let ci = Command::new(&npm)
+        .args(["ci", "--no-audit", "--no-fund"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        ci.status.success(),
+        "{}",
+        String::from_utf8_lossy(&ci.stderr)
+    );
+    let install = Command::new(&npx)
+        .args(["playwright", "install", "chromium"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        install.status.success(),
+        "{}",
+        String::from_utf8_lossy(&install.stderr)
+    );
+    Some(dir)
+}
+
+fn run_in(dir: &Path) -> Outcome {
+    let test = Command::new(BIN).arg("test").arg(dir).output().unwrap();
+    let report = Command::new(BIN)
+        .args(["report", "--format", "json"])
+        .arg(dir)
+        .output()
+        .unwrap();
+    let manifest: RunManifest = serde_json::from_slice(&report.stdout).unwrap();
+    Outcome {
+        exit: test.status.code().unwrap(),
+        manifest,
+        _dir: tempfile::tempdir().unwrap(),
+    }
+}
+
+#[test]
+fn playwright_passing() {
+    let Some(dir) = playwright_project("passing") else {
+        return;
+    };
+    let o = run_in(dir.path());
+    let r = &o.manifest.runners[0];
+    assert_eq!(r.tool, qualyx_core::TestTool::Playwright);
+    assert_eq!(o.manifest.status, Status::Passed, "notes: {:?}", r.notes);
+    assert_eq!(
+        names_with(&o.manifest, Status::Passed),
+        ["shows the form", "signs in with valid credentials"]
+    );
+    assert_eq!(
+        names_with(&o.manifest, Status::Skipped),
+        ["skipped on purpose"]
+    );
+}
+
+#[test]
+fn playwright_failing() {
+    let Some(dir) = playwright_project("failing") else {
+        return;
+    };
+    let o = run_in(dir.path());
+    let r = &o.manifest.runners[0];
+    assert_eq!(o.manifest.status, Status::Failed, "notes: {:?}", r.notes);
+    assert_eq!(o.exit, 1);
+    assert_eq!(
+        names_with(&o.manifest, Status::Failed),
+        ["signs in with valid credentials"]
+    );
+    let msg = r
+        .tests
+        .iter()
+        .find(|t| t.status == Status::Failed)
+        .unwrap()
+        .message
+        .clone()
+        .unwrap_or_default();
+    assert!(msg.contains("Welcome, demo"), "{msg}");
+}

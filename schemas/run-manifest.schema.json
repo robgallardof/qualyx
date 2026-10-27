@@ -351,6 +351,11 @@
           "description": "`python -m pytest` with `--junitxml`.",
           "type": "string",
           "const": "pytest"
+        },
+        {
+          "description": "`npx playwright test` with the JUnit reporter (browser E2E).",
+          "type": "string",
+          "const": "playwright"
         }
       ]
     }

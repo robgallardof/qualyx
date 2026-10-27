@@ -89,6 +89,17 @@ fn detect_node(root: &Path) -> Option<DetectedEcosystem> {
         }
     };
     let script = json.pointer("/scripts/test").and_then(|v| v.as_str());
+    // Playwright projects are recognised by their config, whatever the test script says.
+    const PW_CONFIGS: &[&str] = &[
+        "playwright.config.ts",
+        "playwright.config.js",
+        "playwright.config.mjs",
+        "playwright.config.cjs",
+    ];
+    if PW_CONFIGS.iter().any(|c| root.join(c).is_file()) {
+        d.tool = TestTool::Playwright;
+        return Some(d);
+    }
     match script {
         None => return None,
         Some(s) if s.contains(NPM_PLACEHOLDER_TEST) => return None,

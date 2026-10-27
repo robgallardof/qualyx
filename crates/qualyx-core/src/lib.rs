@@ -48,6 +48,8 @@ pub enum TestTool {
     NpmScript,
     /// `python -m pytest` with `--junitxml`.
     Pytest,
+    /// `npx playwright test` with the JUnit reporter (browser E2E).
+    Playwright,
 }
 
 impl TestTool {
@@ -58,6 +60,7 @@ impl TestTool {
             TestTool::NodeTest => "node-test",
             TestTool::NpmScript => "npm-script",
             TestTool::Pytest => "pytest",
+            TestTool::Playwright => "playwright",
         }
     }
 }

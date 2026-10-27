@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Qualyx fixture login</title>
+</head>
+<body>
+  <main>
+    <h1>Sign in</h1>
+    <form id="login">
+      <label for="user">User</label>
+      <input id="user" name="user" autocomplete="username">
+      <label for="pass">Password</label>
+      <input id="pass" name="pass" type="password" autocomplete="current-password">
+      <button type="submit">Sign in</button>
+    </form>
+    <p id="status" role="status"></p>
+  </main>
+  <script>
+    // Fixture credentials: demo / secret. A wrong password shows an error.
+    document.getElementById("login").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const user = document.getElementById("user").value;
+      const pass = document.getElementById("pass").value;
+      const ok = user === "demo" && pass === "secret";
+      console.log("login attempt", user, ok ? "ok" : "rejected");
+      document.getElementById("status").textContent = ok ? "Welcome, " + user : "Invalid credentials";
+      // Seeded network failure, so evidence of failed requests can be checked.
+      fetch("/missing-endpoint.json").catch(() => {});
+    });
+  </script>
+</body>
+</html>

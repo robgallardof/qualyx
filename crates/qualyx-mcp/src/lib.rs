@@ -79,6 +79,24 @@ pub struct RunArgs {
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct BrowseArgs {
+    /// Project whose .qualyx/ receives the evidence.
+    pub path: String,
+    /// Flow JSON file (must be under an allowed root).
+    pub flow_path: String,
+    /// Browser ids to use (default: every installed browser).
+    pub browsers: Option<Vec<String>>,
+    /// Directory to serve on loopback as the base URL (must be under an allowed root).
+    pub serve_dir: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct DesktopArgs {
+    /// "probe" or "snapshot". Read-only: no input is ever sent.
+    pub action: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 pub struct ImpactArgs {
     /// Project directory.
     pub path: String,
@@ -199,7 +217,7 @@ impl QualyxServer {
             roots: Arc::new(roots),
             runs: Arc::new(Mutex::new(HashMap::new())),
             audit: Arc::new(Mutex::new(audit)),
-            tool_router: Self::tool_router() + Self::intel_router(),
+            tool_router: Self::tool_router() + Self::intel_router() + Self::ui_router(),
         })
     }
 
@@ -576,6 +594,77 @@ impl QualyxServer {
         match qualyx_app::triage(&path, args.run_id.as_deref(), false) {
             Ok(t) => ok_json(serde_json::to_value(t).unwrap_or_default()),
             Err(e) => tool_error(format!("{e:#}")),
+        }
+    }
+}
+
+#[tool_router(router = ui_router)]
+impl QualyxServer {
+    #[tool(
+        description = "Run a JSON browser flow (goto/fill/click/expect_text/wait_for/screenshot) in installed browsers via CDP, WebDriver BiDi or WebDriver. Only loopback URLs and origins listed in [browser] allowed_origins are visited. Returns per-step results, console, failed requests and screenshot paths.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn qa_browser_session(
+        &self,
+        Parameters(args): Parameters<BrowseArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let project = match self.allowed("qa_browser_session", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        let flow = match self.allowed("qa_browser_session", &args, &args.flow_path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        let serve = match &args.serve_dir {
+            Some(d) => match self.allowed("qa_browser_session", &args, d) {
+                Ok(p) => Some(p),
+                Err(e) => return tool_error(e),
+            },
+            None => None,
+        };
+        let req = qualyx_app::browser::BrowseRequest {
+            flow_file: flow,
+            browsers: args.browsers.clone().unwrap_or_default(),
+            serve_dir: serve,
+            base_url: None,
+            headed: false,
+            restrict_origins: true,
+        };
+        match tokio::task::spawn_blocking(move || qualyx_app::browser::browse(&project, &req)).await
+        {
+            Ok(Ok(r)) => ok_json(serde_json::to_value(r).unwrap_or_default()),
+            Ok(Err(e)) => tool_error(format!("{e:#}")),
+            Err(e) => tool_error(e.to_string()),
+        }
+    }
+
+    #[tool(
+        description = "Host desktop, read-only: 'probe' reports session type and accessibility/screenshot availability; 'snapshot' lists top-level windows from the OS accessibility API. Never sends input.",
+        annotations(read_only_hint = true)
+    )]
+    async fn qa_desktop_session(
+        &self,
+        Parameters(args): Parameters<DesktopArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        self.audit("qa_desktop_session", &args, "allowed", "");
+        let action = args.action.clone();
+        let r = tokio::task::spawn_blocking(move || match action.as_str() {
+            "probe" => Ok(serde_json::to_value(qualyx_desktop::probe()).unwrap_or_default()),
+            "snapshot" => {
+                qualyx_desktop::snapshot().map(|w| serde_json::to_value(w).unwrap_or_default())
+            }
+            other => Err(format!("unknown action `{other}` (use probe or snapshot)")),
+        })
+        .await;
+        match r {
+            Ok(Ok(v)) => ok_json(v),
+            Ok(Err(e)) => tool_error(e),
+            Err(e) => tool_error(e.to_string()),
         }
     }
 }

@@ -125,6 +125,12 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                     push_ref(b, &r)?;
                 }
             }
+            // Playwright and many other reporters wrap the failure detail in CDATA.
+            Event::CData(c) => {
+                if let Some(b) = body.as_mut() {
+                    b.push_str(&c.into_inner());
+                }
+            }
             Event::End(e) => match e.name().as_ref() {
                 "failure" | "error" | "skipped" => {
                     if let (Some(tc), Some(b)) = (current.as_mut(), body.take()) {
@@ -293,6 +299,25 @@ mod tests {
         let t = parse_junit(xml).unwrap();
         assert_eq!(t[0].status, Status::Failed);
         assert_eq!(t[0].message.as_deref(), Some("boom & bust"));
+    }
+
+    #[test]
+    fn junit_cdata_detail_is_kept() {
+        // Shape of Playwright 1.64 `--reporter=junit` output.
+        let xml = "<testsuites><testsuite><testcase name=\"signs in\" classname=\"login.spec.js\" time=\"5.14\">\
+            <failure message=\"expect(locator).toHaveText(expected) failed\" type=\"expect.toHaveText\">\
+            <![CDATA[    Expected: \"Welcome, demo\"\n    Received: \"\"\n    at tests/login.spec.js:24:41]]></failure>\
+            </testcase></testsuite></testsuites>";
+        let t = parse_junit(xml).unwrap();
+        let m = t[0].message.as_deref().unwrap();
+        assert!(
+            m.starts_with("expect(locator).toHaveText(expected) failed"),
+            "{m}"
+        );
+        assert!(
+            m.contains("Expected: \"Welcome, demo\"") && m.contains("login.spec.js:24:41"),
+            "{m}"
+        );
     }
 
     #[test]

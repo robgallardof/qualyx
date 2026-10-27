@@ -10,7 +10,9 @@ authors.workspace = true
 [dependencies]
 anyhow = "1.0.104"
 chrono = "0.4.45"
+qualyx-browser.workspace = true
 qualyx-core.workspace = true
+qualyx-desktop.workspace = true
 qualyx-discovery.workspace = true
 qualyx-impact.workspace = true
 qualyx-llm.workspace = true

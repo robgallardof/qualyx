@@ -8,6 +8,7 @@ Last updated: 2026-10-26.
 | M1 — deterministic vertical slice | **done** (Windows, Linux, macOS) | below |
 | M2 — MCP + isolation | **done** | below, [client matrix](m2/clients.md) |
 | M3 — repository intelligence + agents | **done** | below, [benchmark](m3/benchmark.md) |
+| M4 — browser + Computer Use | **done** (scope below) | below, [matrix](m4/browsers.md) |
 
 ## M1 gate
 
@@ -77,6 +78,20 @@ Python 3.13 and pytest 8.3.5.
 | Failure triage role | `qualyx triage` / `qa_analyze_failure`. The reproduction command was executed in tests for Rust, Python, Node and .NET, and it re-fails exactly the broken test |
 | LLM abstraction | `qualyx-llm`: openai-compatible (DeepSeek, OpenAI, Ollama, vLLM) and anthropic, contract-tested against a local HTTP server. **No live provider verified**: no API key or local model was available on the test machine. `qualyx llm-probe` checks a real endpoint |
 | Serena / Graphify / Context7 | not wired in: Qualyx's impact analysis doesn't need them. They stay optional MCP servers an agent can run beside Qualyx (see the [integration matrix](m0/integration-matrix.md)) |
+
+## M4 gate
+
+> Reproducible sample login/form flows; no unverified "all browsers" claims.
+
+| Requirement | Evidence |
+|---|---|
+| Protocol drivers | CDP (Chromium family), WebDriver BiDi (Firefox family, W3C), classic WebDriver (Safari) behind one `Driver` trait |
+| Reproducible login/form flows | `fixtures/web/flows/login-ok.json` passes and `login-wrong-password.json` fails at step 4 with the real page text, a screenshot, console and the seeded 404, on Chrome 156 and Edge 156 |
+| Browser matrix, no blanket claims | [matrix](m4/browsers.md): verified rows name the exact version and OS. Everything else is "unknown" or "see CI" |
+| Playwright | `playwright.config.*` detected, JUnit parsed (CDATA included); passing/failing fixtures verified with 1.64.1 |
+| Screenshots, console, network | per-step PNGs, `console`, `network_failures` (CDP, BiDi) in `browser-report.json` |
+| Safety | MCP `qa_browser_session` only visits loopback or `[browser] allowed_origins` (cloud metadata IPs, `user@host` and look-alike hosts refused). Flow files and served dirs must be under the roots |
+| Computer Use | read-only host companion: probe, UI Automation window snapshot and screenshot verified on Windows 11. **No input injection** (needs consent flows). Wayland is reported as unavailable |
 
 ## Known limitations (M1)
 

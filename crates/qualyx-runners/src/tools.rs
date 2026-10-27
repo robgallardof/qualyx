@@ -15,6 +15,8 @@ pub struct Invocation {
     /// Arguments appended to the resolved program to print its version.
     pub version_args: &'static [&'static str],
     pub detail: Detail,
+    /// Extra environment for the tool (e.g. where a reporter writes).
+    pub env: Vec<(String, String)>,
 }
 
 /// Parsed evidence from one invocation. `artifacts` are file names inside the run dir.
@@ -41,6 +43,7 @@ pub fn runner_for(tool: TestTool) -> &'static dyn Runner {
         TestTool::NodeTest => &NodeTest,
         TestTool::NpmScript => &NpmScript,
         TestTool::Pytest => &Pytest,
+        TestTool::Playwright => &Playwright,
     }
 }
 
@@ -75,6 +78,7 @@ impl Runner for CargoTest {
             args,
             version_args: &["--version"],
             detail: Detail::PerTest,
+            env: Vec::new(),
         }
     }
 
@@ -106,6 +110,7 @@ impl Runner for DotnetTest {
             args,
             version_args: &["--version"],
             detail: Detail::PerTest,
+            env: Vec::new(),
         }
     }
 
@@ -157,6 +162,7 @@ impl Runner for NodeTest {
             ],
             version_args: &["--version"],
             detail: Detail::PerTest,
+            env: Vec::new(),
         }
     }
 
@@ -174,6 +180,7 @@ impl Runner for NpmScript {
             args: vec!["test".into()],
             version_args: &["--version"],
             detail: Detail::ExitCodeOnly,
+            env: Vec::new(),
         }
     }
 
@@ -204,11 +211,34 @@ impl Runner for Pytest {
             ],
             version_args: &["-m", "pytest", "--version"],
             detail: Detail::PerTest,
+            env: Vec::new(),
         }
     }
 
     fn collect(&self, _: &str, out_dir: &Path) -> Collected {
         collect_junit(out_dir, PYTEST_JUNIT)
+    }
+}
+
+pub struct Playwright;
+
+const PLAYWRIGHT_JUNIT: &str = "playwright.junit.xml";
+
+impl Runner for Playwright {
+    fn plan(&self, _: &DetectedEcosystem, out: OutPath<'_>) -> Invocation {
+        Invocation {
+            program: &["npx"],
+            args: ["playwright", "test", "--reporter=line,junit"]
+                .map(String::from)
+                .to_vec(),
+            version_args: &["playwright", "--version"],
+            detail: Detail::PerTest,
+            env: vec![("PLAYWRIGHT_JUNIT_OUTPUT_NAME".into(), out(PLAYWRIGHT_JUNIT))],
+        }
+    }
+
+    fn collect(&self, _: &str, out_dir: &Path) -> Collected {
+        collect_junit(out_dir, PLAYWRIGHT_JUNIT)
     }
 }
 

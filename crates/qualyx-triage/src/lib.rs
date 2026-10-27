@@ -200,6 +200,13 @@ pub fn reproduce(root: &Path, r: &RunnerResult, t: &TestCase) -> Option<Vec<Stri
             ]);
             Some(cmd)
         }
+        TestTool::Playwright => Some(vec![
+            "npx".into(),
+            "playwright".into(),
+            "test".into(),
+            "--grep".into(),
+            format!("^{}$", regex_escape(&t.name)),
+        ]),
         TestTool::NpmScript => None,
     }
 }

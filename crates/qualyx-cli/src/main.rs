@@ -91,6 +91,39 @@ enum Command {
         #[command(subcommand)]
         action: WorktreeAction,
     },
+    /// Installed browsers; `--smoke` drives each one for real.
+    Browsers {
+        #[arg(long)]
+        smoke: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Run a JSON browser flow and keep screenshots, console and failed requests as evidence.
+    Browse {
+        /// Flow file (see fixtures/web/flows).
+        flow: PathBuf,
+        /// Browser ids (chrome, edge, firefox, safari…). Default: every installed browser.
+        #[arg(long = "browser")]
+        browsers: Vec<String>,
+        /// Serve this directory on loopback and use it as the base URL.
+        #[arg(long)]
+        serve: Option<PathBuf>,
+        #[arg(long)]
+        base_url: Option<String>,
+        /// Show the browser window.
+        #[arg(long)]
+        headed: bool,
+        /// Project whose `.qualyx/` receives the evidence.
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Host desktop (Computer Use, read-only): probe, accessibility snapshot, screenshot.
+    Desktop {
+        #[command(subcommand)]
+        action: DesktopAction,
+    },
     /// Check what the configured `[llm]` endpoint supports.
     LlmProbe {
         #[arg(default_value = ".")]
@@ -158,6 +191,16 @@ enum WorktreeAction {
         #[arg(long, default_value = ".")]
         repo: PathBuf,
     },
+}
+
+#[derive(Subcommand)]
+enum DesktopAction {
+    /// What this host session allows.
+    Probe,
+    /// Top-level windows from the accessibility API.
+    Snapshot,
+    /// Full-screen PNG.
+    Screenshot { out: PathBuf },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -374,6 +417,104 @@ fn dispatch(cli: Cli) -> Result<u8> {
                 WorktreeAction::Remove { name, repo } => {
                     qualyx_scheduler::worktree::remove(&repo, &name).map_err(anyhow::Error::msg)?;
                     println!("removed {name}");
+                }
+            }
+            Ok(0)
+        }
+        Command::Browsers { smoke, json } => {
+            let list = qualyx_app::browser::browsers(smoke);
+            if json {
+                println!("{}", serde_json::to_string_pretty(&list)?);
+                return Ok(0);
+            }
+            if list.is_empty() {
+                println!("No supported browser found.");
+            }
+            for e in &list {
+                let s = e
+                    .smoke
+                    .as_ref()
+                    .map(|s| {
+                        format!(
+                            "{} via {} — {}",
+                            s.status,
+                            s.protocol.as_deref().unwrap_or("-"),
+                            s.detail
+                        )
+                    })
+                    .unwrap_or_default();
+                println!(
+                    "{:<9} {:<16} {}",
+                    e.browser.id,
+                    e.browser.version.as_deref().unwrap_or("?"),
+                    s
+                );
+            }
+            let failed = list
+                .iter()
+                .any(|e| e.smoke.as_ref().is_some_and(|s| s.status != "verified"));
+            Ok(if failed { 1 } else { 0 })
+        }
+        Command::Browse {
+            flow,
+            browsers,
+            serve,
+            base_url,
+            headed,
+            project,
+            json,
+        } => {
+            let req = qualyx_app::browser::BrowseRequest {
+                flow_file: flow,
+                browsers,
+                serve_dir: serve,
+                base_url,
+                headed,
+                restrict_origins: false,
+            };
+            let r = qualyx_app::browser::browse(&project, &req)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&r)?);
+            } else {
+                for f in &r.flows {
+                    println!(
+                        "[{}] {} {} via {} — {} step(s)",
+                        if f.passed { "PASS" } else { "FAIL" },
+                        f.browser,
+                        f.version.as_deref().unwrap_or("?"),
+                        f.protocol,
+                        f.steps.len()
+                    );
+                    for s in f.steps.iter().filter(|s| !s.passed) {
+                        println!("    step {}: {}", s.index, s.error.as_deref().unwrap_or(""));
+                    }
+                    for c in &f.console {
+                        println!("    console {}: {}", c.level, c.text);
+                    }
+                    for n in &f.network_failures {
+                        println!("    network: {n}");
+                    }
+                }
+                for (b, why) in &r.unavailable {
+                    println!("[UNAVAILABLE] {b}: {why}");
+                }
+                println!("evidence: {}", r.run_dir.display());
+            }
+            Ok(if r.passed { 0 } else { 1 })
+        }
+        Command::Desktop { action } => {
+            match action {
+                DesktopAction::Probe => println!(
+                    "{}",
+                    serde_json::to_string_pretty(&qualyx_desktop::probe())?
+                ),
+                DesktopAction::Snapshot => {
+                    let w = qualyx_desktop::snapshot().map_err(anyhow::Error::msg)?;
+                    println!("{}", serde_json::to_string_pretty(&w)?);
+                }
+                DesktopAction::Screenshot { out } => {
+                    qualyx_desktop::screenshot(&out).map_err(anyhow::Error::msg)?;
+                    println!("wrote {}", out.display());
                 }
             }
             Ok(0)

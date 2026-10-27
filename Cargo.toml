@@ -21,6 +21,8 @@ qualyx-impact = { path = "crates/qualyx-impact" }
 qualyx-scheduler = { path = "crates/qualyx-scheduler" }
 qualyx-llm = { path = "crates/qualyx-llm" }
 qualyx-triage = { path = "crates/qualyx-triage" }
+qualyx-browser = { path = "crates/qualyx-browser" }
+qualyx-desktop = { path = "crates/qualyx-desktop" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

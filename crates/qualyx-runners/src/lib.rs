@@ -121,7 +121,7 @@ pub fn execute(
             );
         }
         let name = container::container_name(run_id, detected.ecosystem);
-        let args = container::run_args(
+        let mut args = container::run_args(
             &name,
             detected.ecosystem,
             ws.path(),
@@ -129,6 +129,12 @@ pub fn execute(
             inv.program[0],
             &inv.args,
         );
+        for (k, v) in &inv.env {
+            // Container paths are already mapped by `plan`.
+            let pos = args.iter().position(|a| a == "-w").unwrap_or(0);
+            args.insert(pos, format!("{k}={v}"));
+            args.insert(pos, "-e".into());
+        }
         let line = std::iter::once(engine.to_string_lossy().into_owned())
             .chain(args.iter().cloned())
             .collect();
@@ -159,11 +165,9 @@ pub fn execute(
             .chain(inv.args.iter().cloned())
             .collect();
         let version = process::version(&program, inv.version_args, root);
-        (
-            line,
-            process::command(&program, &inv.args, root, &env),
-            version,
-        )
+        let mut cmd = process::command(&program, &inv.args, root, &env);
+        cmd.envs(inv.env.iter().map(|(k, v)| (k, v)));
+        (line, cmd, version)
     };
 
     let log_path = run_dir.join(&log_name);

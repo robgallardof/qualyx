@@ -137,8 +137,10 @@ fn lists_tools_with_schemas() {
         names,
         [
             "qa_analyze_failure",
+            "qa_browser_session",
             "qa_cancel",
             "qa_capabilities",
+            "qa_desktop_session",
             "qa_discover",
             "qa_doctor",
             "qa_get_artifact",
@@ -313,4 +315,45 @@ fn paths_outside_roots_and_artifact_traversal_are_denied() {
 
     let audit = fs::read_to_string(root.path().join(".qualyx/mcp-audit.jsonl")).unwrap();
     assert!(audit.lines().any(|l| l.contains("denied")));
+}
+
+#[test]
+fn browser_flows_cannot_reach_remote_origins() {
+    let root = tempfile::tempdir().unwrap();
+    let flow = root.path().join("remote.json");
+    fs::write(
+        &flow,
+        r#"{"name":"x","steps":[{"action":"goto","url":"http://169.254.169.254/latest/meta-data"}]}"#,
+    )
+    .unwrap();
+    let mut c = Client::start(root.path());
+    let (err, msg) = c.call(
+        "qa_browser_session",
+        json!({"path": root.path().display().to_string(), "flow_path": flow.display().to_string()}),
+    );
+    assert!(err);
+    assert!(msg.as_str().unwrap().contains("not loopback"), "{msg}");
+    // A flow file outside the roots is refused before it is even read.
+    let outside = tempfile::tempdir().unwrap();
+    let f2 = outside.path().join("f.json");
+    fs::write(&f2, "{}").unwrap();
+    let (err, msg) = c.call(
+        "qa_browser_session",
+        json!({"path": root.path().display().to_string(), "flow_path": f2.display().to_string()}),
+    );
+    assert!(
+        err && msg.as_str().unwrap().contains("outside the allowed roots"),
+        "{msg}"
+    );
+}
+
+#[test]
+fn desktop_session_is_read_only() {
+    let root = tempfile::tempdir().unwrap();
+    let mut c = Client::start(root.path());
+    let (err, probe) = c.call("qa_desktop_session", json!({"action": "probe"}));
+    assert!(!err, "{probe}");
+    assert_eq!(probe["input"], "not-implemented");
+    let (err, _) = c.call("qa_desktop_session", json!({"action": "click"}));
+    assert!(err);
 }

@@ -3,6 +3,7 @@
 //! Front ends parse input and format output; everything else (config, running, persisting,
 //! reading evidence back) lives here so the behaviour is identical whichever door is used.
 
+pub mod browser;
 pub mod render;
 
 use std::fs;

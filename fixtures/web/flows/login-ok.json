@@ -1,0 +1,11 @@
+{
+  "name": "login-ok",
+  "steps": [
+    { "action": "goto", "url": "/login.html" },
+    { "action": "fill", "selector": "#user", "value": "demo" },
+    { "action": "fill", "selector": "#pass", "value": "secret" },
+    { "action": "click", "selector": "button[type=submit]" },
+    { "action": "expect_text", "selector": "#status", "contains": "Welcome, demo" },
+    { "action": "screenshot", "name": "signed-in" }
+  ]
+}

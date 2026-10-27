@@ -49,6 +49,24 @@ jobs:
         env:
           # Linux runners have a Linux container engine; Windows/macOS runners don't.
           QUALYX_TEST_DOCKER: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
+      - name: Allow the Chrome sandbox on Ubuntu 24.04 (AppArmor userns restriction)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Playwright browsers (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npx -y playwright@1.64.1 install --with-deps chromium
+      - name: Enable safaridriver (macOS)
+        if: matrix.os == 'macos-latest'
+        run: sudo safaridriver --enable
+      - name: Real browsers (installed on the runner image)
+        run: cargo test --locked -p qualyx-browser --test real_browsers -- --nocapture
+        env:
+          QUALYX_TEST_BROWSERS: "1"
+      - name: Playwright runner (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo test --locked -p qualyx-cli --test fixtures playwright
+        env:
+          QUALYX_TEST_PLAYWRIGHT: "1"
       - name: Smoke test the built binary
         shell: bash
         run: |
