@@ -124,6 +124,29 @@ enum Command {
         #[command(subcommand)]
         action: DesktopAction,
     },
+    /// Load tests with k6 and statistically defended regression checks.
+    Perf {
+        #[command(subcommand)]
+        action: PerfAction,
+    },
+    /// Secrets, SAST and dependency scanning (Gitleaks, Semgrep, Trivy, OSV-Scanner) as SARIF.
+    Security {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Limit to these scanners (gitleaks, semgrep, trivy, osv-scanner).
+        #[arg(long = "scanner")]
+        scanners: Vec<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// OWASP ZAP baseline (passive) scan of an authorized target.
+    Dast {
+        target: String,
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
     /// Check what the configured `[llm]` endpoint supports.
     LlmProbe {
         #[arg(default_value = ".")]
@@ -190,6 +213,36 @@ enum WorktreeAction {
         name: String,
         #[arg(long, default_value = ".")]
         repo: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+enum PerfAction {
+    /// Run a workload (TOML) with k6 `--repeat` times.
+    Run {
+        workload: PathBuf,
+        #[arg(long, default_value_t = 3)]
+        repeat: u32,
+        /// Mark this run as the workload's baseline.
+        #[arg(long)]
+        baseline: bool,
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Compare a candidate run (default: latest) with the baseline.
+    Compare {
+        /// Workload name.
+        name: String,
+        #[arg(long)]
+        baseline: Option<String>,
+        #[arg(long)]
+        candidate: Option<String>,
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -518,6 +571,166 @@ fn dispatch(cli: Cli) -> Result<u8> {
                 }
             }
             Ok(0)
+        }
+        Command::Perf { action } => match action {
+            PerfAction::Run {
+                workload,
+                repeat,
+                baseline,
+                project,
+                json,
+            } => {
+                let (r, dir) =
+                    qualyx_app::assurance::perf_run(&project, &workload, repeat, baseline, None)?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&r)?);
+                } else {
+                    for (i, s) in r.samples.iter().enumerate() {
+                        println!(
+                            "repeat {}: {} req, {:.1} rps, errors {:.2}%, p50 {:.2} ms, p95 {:.2} ms, p99 {:.2} ms{}",
+                            i + 1,
+                            s.requests,
+                            s.rps,
+                            s.error_rate * 100.0,
+                            s.p50_ms,
+                            s.p95_ms,
+                            s.p99_ms,
+                            if s.thresholds_failed.is_empty() {
+                                String::new()
+                            } else {
+                                format!(" — thresholds failed: {}", s.thresholds_failed.join(", "))
+                            }
+                        );
+                    }
+                    if r.noisy {
+                        println!(
+                            "warning: p95 varies {:.0}% between repeats; results are noisy",
+                            r.p95_cv.unwrap_or(0.0) * 100.0
+                        );
+                    }
+                    println!(
+                        "run {} {}— evidence: {}",
+                        r.run_id,
+                        if baseline { "(baseline) " } else { "" },
+                        dir.display()
+                    );
+                }
+                Ok(
+                    if r.samples.iter().any(|s| !s.thresholds_failed.is_empty()) {
+                        1
+                    } else {
+                        0
+                    },
+                )
+            }
+            PerfAction::Compare {
+                name,
+                baseline,
+                candidate,
+                project,
+                json,
+            } => {
+                let c = qualyx_app::assurance::perf_compare(
+                    &project,
+                    &name,
+                    baseline.as_deref(),
+                    candidate.as_deref(),
+                )?;
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&c)?);
+                } else {
+                    println!(
+                        "{}: baseline {} vs candidate {}",
+                        c.verdict.to_uppercase(),
+                        c.baseline_run,
+                        c.candidate_run
+                    );
+                    println!(
+                        "  median {:.2} -> {:.2} ms, p95 {:.2} -> {:.2} ms",
+                        c.baseline_median_ms,
+                        c.candidate_median_ms,
+                        c.baseline_p95_ms,
+                        c.candidate_p95_ms
+                    );
+                    for r in &c.reasons {
+                        println!("  {r}");
+                    }
+                }
+                Ok(match c.verdict.as_str() {
+                    "regression" => 1,
+                    "inconclusive" => 2,
+                    _ => 0,
+                })
+            }
+        },
+        Command::Security {
+            path,
+            scanners,
+            json,
+        } => {
+            let list = scanners
+                .iter()
+                .map(|s| {
+                    qualyx_security::Scanner::parse(s)
+                        .ok_or_else(|| anyhow::anyhow!("unknown scanner `{s}`"))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let (r, dir) = qualyx_app::assurance::security_scan(&path, &list)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&r)?);
+            } else {
+                for s in &r.scanners {
+                    println!(
+                        "{:<12} {:<8} {:>4} finding(s)  {}",
+                        s.scanner.id(),
+                        s.status,
+                        s.findings,
+                        s.version.as_deref().unwrap_or("")
+                    );
+                    for n in &s.notes {
+                        println!("             note: {n}");
+                    }
+                }
+                for f in r.findings.iter().take(30) {
+                    println!(
+                        "  [{}] {} {} {}:{}",
+                        f.level,
+                        f.tool,
+                        f.rule_id,
+                        f.file.as_deref().unwrap_or("-"),
+                        f.line.map(|l| l.to_string()).unwrap_or_default()
+                    );
+                }
+                if r.findings.len() > 30 {
+                    println!(
+                        "  … {} more in {}",
+                        r.findings.len() - 30,
+                        dir.join("merged.sarif").display()
+                    );
+                }
+                println!("{} — evidence: {}", r.status.to_uppercase(), dir.display());
+            }
+            Ok(match r.status.as_str() {
+                "clean" => 0,
+                "findings" => 1,
+                _ => 2,
+            })
+        }
+        Command::Dast {
+            target,
+            project,
+            json,
+        } => {
+            let (r, dir) = qualyx_app::assurance::dast(&project, &target)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&r)?);
+            } else {
+                for f in &r.findings {
+                    println!("  [{}] {} {}", f.level, f.rule_id, f.message);
+                }
+                println!("{} — evidence: {}", r.status.to_uppercase(), dir.display());
+            }
+            Ok(if r.findings.is_empty() { 0 } else { 1 })
         }
         Command::LlmProbe { path } => {
             let (cfg, caps) = qualyx_app::llm_probe(&path)?;

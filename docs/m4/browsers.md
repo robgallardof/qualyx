@@ -15,7 +15,7 @@ evaluate JS, screenshot (`qualyx browsers --smoke`), plus the login flows in
 | Edge | Chromium | CDP | 155.0.4283.45 · 155.0.4283.62 · 155.0.4283.62 | Ubuntu · Windows · macOS (CI) | **verified** | same run |
 | Firefox | Firefox | WebDriver BiDi | 157.0 · 158.0.1 · 158.0.1 | Ubuntu · Windows · macOS (CI) | **verified** | same run: smoke + both login flows, console via `log.entryAdded` |
 | Safari | WebKit | WebDriver (safaridriver) | 26.6.2 | macOS (CI) | **verified** | same run, after `sudo safaridriver --enable`; no console/network evidence by design |
-| Chromium, Brave, Opera, Vivaldi | Chromium | CDP | — | — | **unknown** | detected by path, never run on a test machine |
+| Brave, Opera, Vivaldi | Chromium | CDP | — | — | **unknown** | detected by path, never run on a test machine |
 | Zen | Firefox | WebDriver BiDi | — | — | **unknown** | detected by path, never run on a test machine |
 
 Notes:

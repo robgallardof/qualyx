@@ -97,6 +97,26 @@ pub struct DesktopArgs {
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct SecurityArgs {
+    /// Project directory to scan.
+    pub path: String,
+    /// Subset of: gitleaks, semgrep, trivy, osv-scanner (default: all installed).
+    pub scanners: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct PerfArgs {
+    /// Project whose .qualyx/ stores the results.
+    pub path: String,
+    /// Workload TOML file (must be under an allowed root).
+    pub workload_path: String,
+    /// Repeats (default 2, max 3).
+    pub repeat: Option<u32>,
+    /// Mark the run as baseline.
+    pub baseline: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 pub struct ImpactArgs {
     /// Project directory.
     pub path: String,
@@ -217,7 +237,10 @@ impl QualyxServer {
             roots: Arc::new(roots),
             runs: Arc::new(Mutex::new(HashMap::new())),
             audit: Arc::new(Mutex::new(audit)),
-            tool_router: Self::tool_router() + Self::intel_router() + Self::ui_router(),
+            tool_router: Self::tool_router()
+                + Self::intel_router()
+                + Self::ui_router()
+                + Self::assurance_router(),
         })
     }
 
@@ -664,6 +687,89 @@ impl QualyxServer {
         match r {
             Ok(Ok(v)) => ok_json(v),
             Ok(Err(e)) => tool_error(e),
+            Err(e) => tool_error(e.to_string()),
+        }
+    }
+}
+
+#[tool_router(router = assurance_router)]
+impl QualyxServer {
+    #[tool(
+        description = "Scan a project for secrets (Gitleaks, redacted), code issues (Semgrep) and vulnerable dependencies (Trivy, OSV-Scanner). Returns normalized findings; full SARIF stays on disk.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn qa_security_scan(
+        &self,
+        Parameters(args): Parameters<SecurityArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let path = match self.allowed("qa_security_scan", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        let mut list = Vec::new();
+        for s in args.scanners.clone().unwrap_or_default() {
+            match qualyx_security::Scanner::parse(&s) {
+                Some(x) => list.push(x),
+                None => return tool_error(format!("unknown scanner `{s}`")),
+            }
+        }
+        match tokio::task::spawn_blocking(move || {
+            qualyx_app::assurance::security_scan(&path, &list)
+        })
+        .await
+        {
+            Ok(Ok((mut r, dir))) => {
+                let total = r.findings.len();
+                r.findings.truncate(50);
+                ok_json(json!({"report": r, "total_findings": total, "evidence": dir}))
+            }
+            Ok(Err(e)) => tool_error(format!("{e:#}")),
+            Err(e) => tool_error(e.to_string()),
+        }
+    }
+
+    #[tool(
+        description = "Run an authorized k6 workload (loopback or [performance] allowed_targets, within the configured VU/RPS/duration ceilings, at most 120 s per call) and compare with the baseline when one exists.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn qa_performance_run(
+        &self,
+        Parameters(args): Parameters<PerfArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let project = match self.allowed("qa_performance_run", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        let workload = match self.allowed("qa_performance_run", &args, &args.workload_path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        let repeat = args.repeat.unwrap_or(2).clamp(1, 3);
+        let mark = args.baseline.unwrap_or(false);
+        let r = tokio::task::spawn_blocking(move || -> anyhow::Result<serde_json::Value> {
+            let (run, dir) =
+                qualyx_app::assurance::perf_run(&project, &workload, repeat, mark, Some(120))?;
+            let cmp = if mark {
+                None
+            } else {
+                qualyx_app::assurance::perf_compare(
+                    &project,
+                    &run.workload.name,
+                    None,
+                    Some(&run.run_id),
+                )
+                .ok()
+            };
+            Ok(json!({"run": run, "comparison": cmp, "evidence": dir}))
+        })
+        .await;
+        match r {
+            Ok(Ok(v)) => ok_json(v),
+            Ok(Err(e)) => tool_error(format!("{e:#}")),
             Err(e) => tool_error(e.to_string()),
         }
     }

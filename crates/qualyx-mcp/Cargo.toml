@@ -17,6 +17,7 @@ qualyx-desktop.workspace = true
 qualyx-discovery.workspace = true
 qualyx-impact.workspace = true
 qualyx-runners.workspace = true
+qualyx-security.workspace = true
 qualyx-store.workspace = true
 rmcp = { version = "3.8", features = ["server", "transport-io", "macros"] }
 schemars = "1.2.3"

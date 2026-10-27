@@ -145,9 +145,11 @@ fn lists_tools_with_schemas() {
             "qa_doctor",
             "qa_get_artifact",
             "qa_list_runs",
+            "qa_performance_run",
             "qa_report",
             "qa_run",
             "qa_run_status",
+            "qa_security_scan",
             "qa_test_impact",
             "qa_verify"
         ]
@@ -356,4 +358,34 @@ fn desktop_session_is_read_only() {
     assert_eq!(probe["input"], "not-implemented");
     let (err, _) = c.call("qa_desktop_session", json!({"action": "click"}));
     assert!(err);
+}
+
+#[test]
+fn load_tests_against_unauthorized_targets_are_blocked() {
+    let root = tempfile::tempdir().unwrap();
+    let w = root.path().join("prod.toml");
+    fs::write(
+        &w,
+        "name = \"prod\"\ntarget = \"https://example.com/checkout\"\nvus = 5\n",
+    )
+    .unwrap();
+    let mut c = Client::start(root.path());
+    let (err, msg) = c.call(
+        "qa_performance_run",
+        json!({"path": root.path().display().to_string(), "workload_path": w.display().to_string()}),
+    );
+    assert!(err);
+    assert!(msg.as_str().unwrap().contains("not loopback"), "{msg}");
+
+    // Loopback but beyond the configured ceiling.
+    fs::write(
+        &w,
+        "name = \"big\"\ntarget = \"http://127.0.0.1:9/\"\nvus = 5000\n",
+    )
+    .unwrap();
+    let (err, msg) = c.call(
+        "qa_performance_run",
+        json!({"path": root.path().display().to_string(), "workload_path": w.display().to_string()}),
+    );
+    assert!(err && msg.as_str().unwrap().contains("vus"), "{msg}");
 }

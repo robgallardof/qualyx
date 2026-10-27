@@ -27,7 +27,7 @@ isolation)**. Read [`docs/STATUS.md`](docs/STATUS.md) first.
 - Integrate mature tools (Playwright, k6, Semgrep…) through adapters; do not reimplement them.
 - Deny-by-default for shell, network, writes, DAST/load and anything touching production.
 - KISS, DRY, SOLID; modular monolith before microservices.
-- Commit messages in Spanish, detailed and sectioned, with no AI co-author trailer.
+- Commit messages in English, detailed and sectioned, with no AI co-author trailer.
 - User docs in English and Spanish where feasible.
 
 ## Naming

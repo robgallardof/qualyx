@@ -717,8 +717,10 @@ dependencies = [
  "qualyx-discovery",
  "qualyx-impact",
  "qualyx-llm",
+ "qualyx-perf",
  "qualyx-runners",
  "qualyx-scheduler",
+ "qualyx-security",
  "qualyx-store",
  "qualyx-triage",
  "serde",
@@ -754,6 +756,7 @@ dependencies = [
  "qualyx-mcp",
  "qualyx-runners",
  "qualyx-scheduler",
+ "qualyx-security",
  "qualyx-store",
  "schemars",
  "serde_json",
@@ -824,6 +827,7 @@ dependencies = [
  "qualyx-discovery",
  "qualyx-impact",
  "qualyx-runners",
+ "qualyx-security",
  "qualyx-store",
  "rmcp",
  "schemars",
@@ -832,6 +836,18 @@ dependencies = [
  "tempfile",
  "tokio",
  "toml",
+]
+
+[[package]]
+name = "qualyx-perf"
+version = "0.1.0"
+dependencies = [
+ "qualyx-runners",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
+ "which",
 ]
 
 [[package]]
@@ -853,6 +869,16 @@ name = "qualyx-scheduler"
 version = "0.1.0"
 dependencies = [
  "qualyx-runners",
+ "tempfile",
+]
+
+[[package]]
+name = "qualyx-security"
+version = "0.1.0"
+dependencies = [
+ "qualyx-runners",
+ "serde",
+ "serde_json",
  "tempfile",
 ]
 

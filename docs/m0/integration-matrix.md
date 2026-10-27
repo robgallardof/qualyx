@@ -17,10 +17,10 @@ Qualyx binaries. Users install them themselves, and `qualyx doctor` reports whet
 | Crate | Version | License | Use | Milestone |
 |---|---|---|---|---|
 | clap | 4.6 | MIT/Apache-2.0 | CLI | M1 |
-| rusqlite (bundled) | 0.40 (0.41 exists; upgrade tracked) | MIT | local run store | M1 |
-| quick-xml | 0.41 (0.42 exists; upgrade tracked) | MIT | JUnit / TRX parsing | M1 |
+| rusqlite (bundled) | 0.41 | MIT | local run store | M1 ✔ |
+| quick-xml | 0.42 | MIT | JUnit / TRX parsing | M1 ✔ |
 | schemars | 1.2 | MIT | JSON Schemas of the domain types | M1 |
-| rmcp (official MCP Rust SDK) | 3.8 | Apache-2.0 (transitioning from MIT) | MCP server | M2 |
+| rmcp (official MCP Rust SDK) | 3.8 | Apache-2.0 (transitioning from MIT) | MCP server | M2 ✔ |
 | axum | — | MIT | HTTP API | M7 |
 | opentelemetry-rust | — | Apache-2.0 | traces/metrics | M5 |
 | testcontainers-rs | — | Apache-2.0 | isolated integration fixtures | M6 |
@@ -34,18 +34,18 @@ Qualyx binaries. Users install them themselves, and `qualyx doctor` reports whet
 | pytest (`--junitxml`) | MIT | — | native runner | **verified M1** | exit code only |
 | node --test (JUnit reporter) | MIT | — | native runner | **verified M1** | exit code only |
 | vitest (`--reporter=junit`) | MIT | — | native runner | planned M1.x | exit code only |
-| Playwright | Apache-2.0 | 2026-10-27 | runner + MCP | planned M4 | CDP |
+| Playwright | Apache-2.0 | 2026-10-27 | runner | **verified M4** (1.64.1) | CDP |
 | Playwright MCP | Apache-2.0 | 2026-10-22 | MCP | planned M4 | Playwright CLI |
 | Chrome DevTools MCP | Apache-2.0 | 2026-10-26 | MCP | planned M4 | CDP direct |
-| WebDriver BiDi | W3C spec | 2026-10-08 | protocol | planned M4 | WebDriver classic |
-| k6 | **AGPL-3.0** | 2026-10-26 | CLI | planned M5 | autocannon (HTTP only) |
-| Lighthouse | Apache-2.0 | 2026-10-25 | CLI | planned M5 | — |
-| autocannon | MIT | 2026-05-16 | CLI | planned M5 | k6 |
-| Semgrep | **LGPL-2.1** | 2026-10-27 | CLI | planned M5 | — |
-| Trivy | Apache-2.0 | 2026-10-26 | CLI | planned M5 | OSV-Scanner |
-| Gitleaks | MIT | 2026-10-23 | CLI | planned M5 | — |
-| OSV-Scanner | Apache-2.0 | 2026-10-27 | CLI | planned M5 | Trivy |
-| OWASP ZAP | Apache-2.0 | 2026-10-26 | CLI/API | planned M5 (authorized targets only) | — |
+| WebDriver BiDi | W3C spec | 2026-10-08 | protocol | **verified M4** (Firefox 157/158) | WebDriver classic |
+| k6 | **AGPL-3.0** | 2026-10-26 | CLI | **verified M5** (2.3.0) | — |
+| Lighthouse | Apache-2.0 | 2026-10-25 | CLI | planned (not in M5) | — |
+| autocannon | MIT | 2026-05-16 | CLI | planned (not in M5) | k6 |
+| Semgrep | **LGPL-2.1** | 2026-10-27 | CLI | **verified M5** (1.182.1) | — |
+| Trivy | Apache-2.0 | 2026-10-26 | CLI | **verified M5** (0.76.1) | OSV-Scanner |
+| Gitleaks | MIT | 2026-10-23 | CLI | **verified M5** (8.30.1) | — |
+| OSV-Scanner | Apache-2.0 | 2026-10-27 | CLI | **verified M5** (2.7.0) | Trivy |
+| OWASP ZAP | Apache-2.0 | 2026-10-26 | container | **verified M5** (baseline, authorized targets only) | — |
 | axe-core | **MPL-2.0** | 2026-10-26 | JS in page | planned M6 | Pa11y |
 | Pa11y | **LGPL-3.0** | 2026-10-26 | CLI | planned M6 | axe-core |
 | Schemathesis | MIT | 2026-10-26 | CLI | planned M6 | — |

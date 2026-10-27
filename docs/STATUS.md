@@ -9,6 +9,7 @@ Last updated: 2026-10-26.
 | M2 — MCP + isolation | **done** | below, [client matrix](m2/clients.md) |
 | M3 — repository intelligence + agents | **done** | below, [benchmark](m3/benchmark.md) |
 | M4 — browser + Computer Use | **done** (scope below) | below, [matrix](m4/browsers.md) |
+| M5 — performance + security | **done** | below, [evidence](m5/assurance.md) |
 
 ## M1 gate
 
@@ -92,6 +93,22 @@ Python 3.13 and pytest 8.3.5.
 | Screenshots, console, network | per-step PNGs, `console`, `network_failures` (CDP, BiDi) in `browser-report.json` |
 | Safety | MCP `qa_browser_session` only visits loopback or `[browser] allowed_origins` (cloud metadata IPs, `user@host` and look-alike hosts refused). Flow files and served dirs must be under the roots |
 | Computer Use | read-only host companion: probe, UI Automation window snapshot and screenshot verified on Windows 11. **No input injection** (needs consent flows). Wayland is reported as unavailable |
+
+## M5 gate
+
+> Seeded performance regression and seeded vulnerability detected with evidence; unsafe target
+> blocked.
+
+| Requirement | Evidence |
+|---|---|
+| k6 workloads with warm-up, ceilings, abort | `qualyx perf run` (TOML workload), generated script, `abortOnFail` on the error rate |
+| p50/p95/p99, throughput, errors | per repeat in `result.json`. Raw per-request latencies kept |
+| Statistically defended regression | `qualyx perf compare`: seeded ×4.27 slowdown → regression (p ≈ 0). A/A → no-regression. Noisy or small samples → inconclusive |
+| Semgrep, Trivy, Gitleaks, OSV + SARIF | `qualyx security`: all four ran for real, seeded secret, injection and vulnerable dependency all found. Merged SARIF 2.1.0 |
+| Secret redaction | Gitleaks `--redact` plus Qualyx redaction. The seeded key is absent from every evidence file (asserted) |
+| Authorized ZAP | `qualyx dast <url>`: passive baseline from the official image, loopback or `[security] dast_allowed_targets` only |
+| Unsafe targets blocked | production URL, metadata IP, look-alike hosts, over-ceiling load: refused in CLI, library and MCP |
+| Not covered | Lighthouse, autocannon, profilers/flamegraphs and DB timing aren't integrated yet. The [integration matrix](m0/integration-matrix.md) marks them planned |
 
 ## Known limitations (M1)
 

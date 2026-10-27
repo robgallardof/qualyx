@@ -73,3 +73,36 @@ jobs:
           cargo build --locked -p qualyx-cli
           ./target/debug/qualyx doctor fixtures/python/passing
           ./target/debug/qualyx discover fixtures/node/failing --json
+
+  # M5 gate: seeded performance regression and seeded vulnerabilities detected with real
+  # tools; unsafe targets blocked. Tools are pinned and verified against release checksums.
+  assurance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install pinned k6, Gitleaks, OSV-Scanner, Trivy, Semgrep
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/tools" && cd "$HOME/tools"
+          fetch() { curl -sSfL -o "$2" "$1"; echo "$3  $2" | sha256sum -c -; }
+          fetch https://github.com/grafana/k6/releases/download/v2.3.0/k6-v2.3.0-linux-amd64.tar.gz k6.tgz 39c3117b6af817592dcd0ce4242105c0a7af10948c2a425306f0be8f7a8a8ab1
+          tar -xzf k6.tgz --strip-components=1
+          fetch https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz gitleaks.tgz 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          tar -xzf gitleaks.tgz gitleaks
+          fetch https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64 osv-scanner 160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b
+          fetch https://github.com/aquasecurity/trivy/releases/download/v0.76.1/trivy_0.76.1_Linux-64bit.tar.gz trivy.tgz c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+          tar -xzf trivy.tgz trivy
+          chmod +x k6 gitleaks osv-scanner trivy
+          python -m pip install -q semgrep==1.182.1
+          echo "$HOME/tools" >> "$GITHUB_PATH"
+      - run: docker pull ghcr.io/zaproxy/zaproxy:stable
+      - run: cargo test --locked -p qualyx-perf -p qualyx-security -- --nocapture --test-threads=1
+        env:
+          QUALYX_TEST_K6: "1"
+          QUALYX_TEST_SCANNERS: "1"
+          QUALYX_TEST_ZAP: "1"
