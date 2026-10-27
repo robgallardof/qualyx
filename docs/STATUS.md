@@ -10,6 +10,7 @@ Last updated: 2026-10-26.
 | M3 — repository intelligence + agents | **done** | below, [benchmark](m3/benchmark.md) |
 | M4 — browser + Computer Use | **done** (scope below) | below, [matrix](m4/browsers.md) |
 | M5 — performance + security | **done** | below, [evidence](m5/assurance.md) |
+| M6 — quality and integration depth | **done** (scope below) | [evidence](m6/quality.md) |
 
 ## M1 gate
 
@@ -109,6 +110,16 @@ Python 3.13 and pytest 8.3.5.
 | Authorized ZAP | `qualyx dast <url>`: passive baseline from the official image, loopback or `[security] dast_allowed_targets` only |
 | Unsafe targets blocked | production URL, metadata IP, look-alike hosts, over-ceiling load: refused in CLI, library and MCP |
 | Not covered | Lighthouse, autocannon, profilers/flamegraphs and DB timing aren't integrated yet. The [integration matrix](m0/integration-matrix.md) marks them planned |
+
+## M6 gate
+
+> Known seeded bugs caught; false positives and skipped tests explicitly reported.
+
+See [m6/quality.md](m6/quality.md): flaky detection, the independent reviewer, mutation
+testing (cargo-mutants), API contracts (Schemathesis), accessibility (axe-core) and Compose
+environments each catch their seeded defect and stay quiet on their control. Skipped tests,
+suppressed (reviewed) security findings and unseeded findings are listed in the reports.
+Fuzzing, non-Rust mutation and Pact are **not** implemented.
 
 ## Known limitations (M1)
 

@@ -117,6 +117,24 @@ pub struct PerfArgs {
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct ReviewArgs {
+    /// Repository directory.
+    pub path: String,
+    /// Git revision to compare against (e.g. "origin/main").
+    pub base: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct A11yArgs {
+    /// Project whose .qualyx/ stores the report.
+    pub path: String,
+    /// Page URL (loopback or [browser] allowed_origins).
+    pub url: String,
+    /// Browser id (default: first installed).
+    pub browser: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 pub struct ImpactArgs {
     /// Project directory.
     pub path: String,
@@ -240,7 +258,8 @@ impl QualyxServer {
             tool_router: Self::tool_router()
                 + Self::intel_router()
                 + Self::ui_router()
-                + Self::assurance_router(),
+                + Self::assurance_router()
+                + Self::quality_router(),
         })
     }
 
@@ -384,6 +403,7 @@ impl QualyxServer {
             isolation: Some(isolation),
             changed_since: args.changed_since.clone(),
             jobs: args.jobs.unwrap_or(1).clamp(1, 8),
+            compose: None,
         };
         let prepared = match qualyx_app::prepare(&path, &req, cancel.clone()) {
             Ok(p) => p,
@@ -769,6 +789,72 @@ impl QualyxServer {
         .await;
         match r {
             Ok(Ok(v)) => ok_json(v),
+            Ok(Err(e)) => tool_error(format!("{e:#}")),
+            Err(e) => tool_error(e.to_string()),
+        }
+    }
+}
+
+#[tool_router(router = quality_router)]
+impl QualyxServer {
+    #[tool(
+        description = "Independent reviewer: flags test changes since a git revision that weaken the suite (assertions removed, skips added, tests deleted, expected values rewritten).",
+        annotations(read_only_hint = true)
+    )]
+    async fn qa_review(
+        &self,
+        Parameters(args): Parameters<ReviewArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let path = match self.allowed("qa_review", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        match qualyx_app::quality::review(&path, &args.base) {
+            Ok(r) => ok_json(serde_json::to_value(r).unwrap_or_default()),
+            Err(e) => tool_error(format!("{e:#}")),
+        }
+    }
+
+    #[tool(
+        description = "Flaky tests in the project's stored run history (same commit, clean tree only).",
+        annotations(read_only_hint = true)
+    )]
+    async fn qa_flaky(
+        &self,
+        Parameters(args): Parameters<PathArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let path = match self.allowed("qa_flaky", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        match qualyx_app::quality::flaky_history(&path, 50) {
+            Ok(f) => ok_json(serde_json::to_value(f).unwrap_or_default()),
+            Err(e) => tool_error(format!("{e:#}")),
+        }
+    }
+
+    #[tool(
+        description = "Accessibility audit with axe-core (WCAG 2.1 A/AA) in a real browser. Loopback or [browser] allowed_origins only.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn qa_a11y(
+        &self,
+        Parameters(args): Parameters<A11yArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let path = match self.allowed("qa_a11y", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        let (url, browsers) = (
+            args.url.clone(),
+            args.browser.clone().into_iter().collect::<Vec<_>>(),
+        );
+        match tokio::task::spawn_blocking(move || {
+            qualyx_app::browser::a11y(&path, Some(&url), None, "", &browsers, true)
+        })
+        .await
+        {
+            Ok(Ok(r)) => ok_json(serde_json::to_value(r).unwrap_or_default()),
             Ok(Err(e)) => tool_error(format!("{e:#}")),
             Err(e) => tool_error(e.to_string()),
         }

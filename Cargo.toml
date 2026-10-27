@@ -25,6 +25,7 @@ qualyx-browser = { path = "crates/qualyx-browser" }
 qualyx-desktop = { path = "crates/qualyx-desktop" }
 qualyx-perf = { path = "crates/qualyx-perf" }
 qualyx-security = { path = "crates/qualyx-security" }
+qualyx-quality = { path = "crates/qualyx-quality" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

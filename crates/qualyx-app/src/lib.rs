@@ -5,6 +5,7 @@
 
 pub mod assurance;
 pub mod browser;
+pub mod quality;
 pub mod render;
 
 use std::fs;
@@ -96,6 +97,8 @@ pub struct TestRequest {
     pub changed_since: Option<String>,
     /// Ecosystems run in parallel up to this many at once (0 or 1: sequential).
     pub jobs: usize,
+    /// Compose file whose services are started for the run and removed afterwards.
+    pub compose: Option<PathBuf>,
 }
 
 /// A run that has an id and a directory but hasn't started yet, so callers (MCP) can hand the
@@ -108,6 +111,7 @@ pub struct PreparedRun {
     opts: RunOptions,
     jobs: usize,
     selection: Option<String>,
+    compose: Option<PathBuf>,
 }
 
 pub fn prepare(path: &Path, req: &TestRequest, cancel: CancelToken) -> Result<PreparedRun> {
@@ -131,10 +135,12 @@ pub fn prepare(path: &Path, req: &TestRequest, cancel: CancelToken) -> Result<Pr
             timeout: Duration::from_secs(req.timeout_secs.unwrap_or(config.run.timeout_secs)),
             isolation: req.isolation.unwrap_or(config.run.isolation),
             env_passthrough: config.run.env_passthrough,
+            extra_env: Vec::new(),
             cancel,
         },
         jobs: req.jobs,
         selection,
+        compose: req.compose.clone(),
     })
 }
 
@@ -183,9 +189,28 @@ impl PreparedRun {
 
     /// Execute, then persist `manifest.json`, `report.md` and the SQLite index.
     pub fn execute(
-        self,
+        mut self,
         on_runner: impl FnMut(&qualyx_core::DetectedEcosystem),
     ) -> Result<RunManifest> {
+        // The environment lives for the whole run; dropping it tears it down, even on error.
+        let mut _services = None;
+        let mut service_list = Vec::new();
+        if let Some(file) = self.compose.clone() {
+            if self.opts.isolation == Isolation::Container {
+                bail!(
+                    "--compose with container isolation is not supported: service ports are on the host loopback"
+                );
+            }
+            let env = qualyx_runners::compose::ComposeEnv::up(
+                &file,
+                &self.run_id,
+                Duration::from_secs(300),
+            )
+            .map_err(anyhow::Error::msg)?;
+            service_list = env.env.iter().map(|(k, v)| format!("{k}={v}")).collect();
+            self.opts.extra_env.extend(env.env.clone());
+            _services = Some(env);
+        }
         let mut manifest = if self.jobs > 1 && self.profile.ecosystems.len() > 1 {
             self.execute_parallel(on_runner)?
         } else {
@@ -198,6 +223,7 @@ impl PreparedRun {
             )?
         };
         manifest.selection = self.selection.clone();
+        manifest.services = service_list;
         persist(&self.layout, &self.run_dir, &manifest)?;
         Ok(manifest)
     }

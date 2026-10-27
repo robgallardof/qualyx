@@ -55,6 +55,12 @@ enum Command {
         /// Run up to N ecosystems in parallel.
         #[arg(long, default_value_t = 1)]
         jobs: usize,
+        /// Start the services of this Compose file for the run (ports exported as QUALYX_SVC_*).
+        #[arg(long)]
+        compose: Option<PathBuf>,
+        /// Run the suite N times and report tests whose result changes (flaky).
+        #[arg(long, default_value_t = 1)]
+        repeat: u32,
         /// Print the manifest as JSON instead of the summary.
         #[arg(long)]
         json: bool,
@@ -142,6 +148,56 @@ enum Command {
     /// OWASP ZAP baseline (passive) scan of an authorized target.
     Dast {
         target: String,
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Flaky tests in the stored history (same commit, clean tree).
+    Flaky {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        #[arg(long, default_value_t = 50)]
+        last: u32,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Independent reviewer: flag tests weakened since a git revision.
+    Review {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        #[arg(long)]
+        base: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Mutation testing (Rust, cargo-mutants): which behaviour changes no test notices.
+    Mutation {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// API contract testing with Schemathesis against an OpenAPI schema URL.
+    Contract {
+        schema: String,
+        #[arg(long)]
+        base_url: Option<String>,
+        #[arg(long, default_value_t = 50)]
+        max_examples: u32,
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Accessibility audit (axe-core, WCAG 2.1 A/AA) in a real browser.
+    A11y {
+        /// Page URL, or a path under `--serve`.
+        target: String,
+        #[arg(long)]
+        serve: Option<PathBuf>,
+        #[arg(long = "browser")]
+        browsers: Vec<String>,
         #[arg(long, default_value = ".")]
         project: PathBuf,
         #[arg(long)]
@@ -335,6 +391,8 @@ fn dispatch(cli: Cli) -> Result<u8> {
             isolation,
             changed_since,
             jobs,
+            compose,
+            repeat,
             json,
         } => {
             let req = TestRequest {
@@ -342,7 +400,37 @@ fn dispatch(cli: Cli) -> Result<u8> {
                 isolation: isolation.map(Into::into),
                 changed_since,
                 jobs,
+                compose,
             };
+            if repeat > 1 {
+                let (ms, flaky) = qualyx_app::quality::test_repeat(&path, &req, repeat, |i| {
+                    eprintln!("run {i}/{repeat}…")
+                })?;
+                for (i, m) in ms.iter().enumerate() {
+                    println!(
+                        "run {}: {} — {} passed, {} failed ({})",
+                        i + 1,
+                        m.status.as_str(),
+                        m.counts.passed,
+                        m.counts.failed,
+                        m.run_id
+                    );
+                }
+                for t in &flaky {
+                    println!(
+                        "FLAKY {} {} — {} pass / {} fail in {repeat} runs",
+                        t.ecosystem, t.name, t.passed, t.failed
+                    );
+                }
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&flaky)?);
+                }
+                return Ok(if !flaky.is_empty() {
+                    1
+                } else {
+                    ms.iter().map(|m| m.exit_code() as u8).max().unwrap_or(2)
+                });
+            }
             let (manifest, run_dir) = qualyx_app::test(&path, &req, |d| {
                 if !json {
                     eprintln!("running {} ({})…", d.ecosystem.as_str(), d.tool.as_str());
@@ -731,6 +819,152 @@ fn dispatch(cli: Cli) -> Result<u8> {
                 println!("{} — evidence: {}", r.status.to_uppercase(), dir.display());
             }
             Ok(if r.findings.is_empty() { 0 } else { 1 })
+        }
+        Command::Flaky { path, last, json } => {
+            let f = qualyx_app::quality::flaky_history(&path, last)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&f)?);
+            } else if f.is_empty() {
+                println!(
+                    "No flaky tests in the last {last} run(s) (only clean, same-commit runs are compared)."
+                );
+            } else {
+                for t in &f {
+                    println!(
+                        "FLAKY {} {} — {} pass / {} fail on {}",
+                        t.ecosystem, t.name, t.passed, t.failed, t.code
+                    );
+                }
+            }
+            Ok(if f.is_empty() { 0 } else { 1 })
+        }
+        Command::Review { path, base, json } => {
+            let r = qualyx_app::quality::review(&path, &base)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&r)?);
+            } else {
+                println!("{} test file(s) changed since {}", r.test_files, r.base);
+                for f in &r.findings {
+                    println!("[{:?}] {} — {}", f.kind, f.file, f.detail);
+                    for l in &f.removed {
+                        println!("    - {l}");
+                    }
+                    for l in &f.added {
+                        println!("    + {l}");
+                    }
+                }
+                if r.findings.is_empty() {
+                    println!("No weakened tests found.");
+                }
+            }
+            Ok(if r.findings.is_empty() { 0 } else { 1 })
+        }
+        Command::Mutation { path, json } => {
+            let (r, dir) = qualyx_app::quality::mutation(&path)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&r)?);
+            } else {
+                println!(
+                    "{} mutants: {} caught, {} missed, {} timeout, {} unviable — score {}",
+                    r.total,
+                    r.caught,
+                    r.missed,
+                    r.timeout,
+                    r.unviable,
+                    r.score
+                        .map(|s| format!("{:.0}%", s * 100.0))
+                        .unwrap_or_else(|| "n/a".into())
+                );
+                for m in &r.missed_mutants {
+                    println!("  MISSED {m}");
+                }
+                println!("evidence: {}", dir.display());
+            }
+            Ok(if r.missed > 0 { 1 } else { 0 })
+        }
+        Command::Contract {
+            schema,
+            base_url,
+            max_examples,
+            project,
+            json,
+        } => {
+            let (r, dir) = qualyx_app::quality::contract(
+                &project,
+                &schema,
+                base_url.as_deref(),
+                max_examples,
+            )?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&r)?);
+            } else {
+                for op in &r.operations {
+                    println!("[{}] {}", op.status.as_str().to_uppercase(), op.name);
+                    if let Some(m) = &op.message {
+                        for l in m
+                            .lines()
+                            .filter(|l| {
+                                l.contains("Reproduce")
+                                    || l.trim_start().starts_with("curl")
+                                    || l.contains("ST") && l.contains("error")
+                            })
+                            .take(6)
+                        {
+                            println!("    {}", l.trim());
+                        }
+                    }
+                }
+                println!("{} — evidence: {}", r.status.to_uppercase(), dir.display());
+            }
+            Ok(match r.status.as_str() {
+                "passed" => 0,
+                "failed" => 1,
+                _ => 2,
+            })
+        }
+        Command::A11y {
+            target,
+            serve,
+            browsers,
+            project,
+            json,
+        } => {
+            let (url, page) = if serve.is_some() {
+                (None, target.as_str())
+            } else {
+                (Some(target.as_str()), "")
+            };
+            let reports =
+                qualyx_app::browser::a11y(&project, url, serve.as_deref(), page, &browsers, false)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&reports)?);
+            } else {
+                for r in &reports {
+                    println!(
+                        "{} — axe {} ({}): {} violation(s), {} passes, {} need review",
+                        r.url,
+                        r.axe_version,
+                        r.tags.join(","),
+                        r.violations.len(),
+                        r.passes,
+                        r.incomplete
+                    );
+                    for v in &r.violations {
+                        println!(
+                            "  [{}] {} — {} ({})",
+                            v.impact.as_deref().unwrap_or("?"),
+                            v.id,
+                            v.help,
+                            v.nodes.join(", ")
+                        );
+                    }
+                }
+            }
+            Ok(if reports.iter().any(|r| !r.violations.is_empty()) {
+                1
+            } else {
+                0
+            })
         }
         Command::LlmProbe { path } => {
             let (cfg, caps) = qualyx_app::llm_probe(&path)?;

@@ -3,6 +3,7 @@
 //! The pipeline is a library (not CLI code) so the MCP server can reuse it (ADR 0003).
 
 pub mod cargo_text;
+pub mod compose;
 pub mod container;
 pub mod process;
 pub mod redact;
@@ -34,6 +35,8 @@ pub struct RunOptions {
     pub isolation: Isolation,
     /// Extra environment variable names a project explicitly lets through (config).
     pub env_passthrough: Vec<String>,
+    /// Variables set by Qualyx itself for the tests (e.g. Compose service addresses).
+    pub extra_env: Vec<(String, String)>,
     pub cancel: CancelToken,
 }
 
@@ -43,6 +46,7 @@ impl Default for RunOptions {
             timeout: Duration::from_secs(30 * 60),
             isolation: Isolation::Process,
             env_passthrough: Vec::new(),
+            extra_env: Vec::new(),
             cancel: CancelToken::default(),
         }
     }
@@ -92,7 +96,8 @@ pub fn execute(
     };
 
     // Build the concrete command for the chosen isolation.
-    let env = process::child_env(&opts.env_passthrough);
+    let mut env = process::child_env(&opts.env_passthrough);
+    env.extend(opts.extra_env.iter().map(|(k, v)| (k.into(), v.into())));
     let mut _workspace: Option<tempfile::TempDir> = None;
     let mut container_cleanup: Option<(std::path::PathBuf, String)> = None;
     let (command_line, cmd, tool_version) = if in_container {
@@ -336,6 +341,7 @@ pub fn assemble(
         arch: std::env::consts::ARCH.to_string(),
         isolation,
         selection: None,
+        services: Vec::new(),
         started_at,
         finished_at: Utc::now(),
         status,

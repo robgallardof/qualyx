@@ -23,7 +23,7 @@ Qualyx binaries. Users install them themselves, and `qualyx doctor` reports whet
 | rmcp (official MCP Rust SDK) | 3.8 | Apache-2.0 (transitioning from MIT) | MCP server | M2 ✔ |
 | axum | — | MIT | HTTP API | M7 |
 | opentelemetry-rust | — | Apache-2.0 | traces/metrics | M5 |
-| testcontainers-rs | — | Apache-2.0 | isolated integration fixtures | M6 |
+| testcontainers-rs | — | Apache-2.0 | not used: Compose environments instead | — |
 
 ## External tools (process / protocol boundary)
 
@@ -46,17 +46,20 @@ Qualyx binaries. Users install them themselves, and `qualyx doctor` reports whet
 | Gitleaks | MIT | 2026-10-23 | CLI | **verified M5** (8.30.1) | — |
 | OSV-Scanner | Apache-2.0 | 2026-10-27 | CLI | **verified M5** (2.7.0) | Trivy |
 | OWASP ZAP | Apache-2.0 | 2026-10-26 | container | **verified M5** (baseline, authorized targets only) | — |
-| axe-core | **MPL-2.0** | 2026-10-26 | JS in page | planned M6 | Pa11y |
+| axe-core | **MPL-2.0** | 2026-10-26 | JS in page (downloaded, SHA-512 verified, not bundled) | **verified M6** (4.14.0) | Pa11y |
 | Pa11y | **LGPL-3.0** | 2026-10-26 | CLI | planned M6 | axe-core |
-| Schemathesis | MIT | 2026-10-26 | CLI | planned M6 | — |
-| Pact (reference) | MIT | 2026-10-22 | CLI/FFI | planned M6 | — |
-| Toxiproxy | MIT | 2026-10-20 | server | planned M6 | — |
+| Schemathesis | MIT | 2026-10-26 | CLI | **verified M6** (4.32.5) | — |
+| Pact (reference) | MIT | 2026-10-22 | CLI/FFI | not integrated | Schemathesis (provider side) |
+| Toxiproxy | MIT | 2026-10-20 | server | not integrated | — |
 | Appium | Apache-2.0 | 2026-10-27 | server | scenario (Tier C) | Maestro |
 | Maestro | Apache-2.0 | 2026-10-26 | CLI | scenario (Tier C) | Appium |
 | Serena | **GPL-3.0-or-later** (SolidLSP MIT) | 2026-10-26 | MCP | planned M3, optional | built-in manifest/Git impact |
 | Graphify (now Graphify-Labs/graphify) | Apache-2.0 | 2026-10-26 | CLI/MCP | planned M3, optional | built-in impact |
 | Context7 | MIT | 2026-10-26 | MCP | planned M3, optional | — |
 | GitHub MCP server | MIT | 2026-10-23 | MCP | planned M7 | `git` + REST |
+
+| cargo-mutants | MIT | — | CLI | **verified M6** (27.1.0) | — |
+| Docker Compose | Apache-2.0 | — | CLI | **verified M6** (test environments) | — |
 
 ## Agent clients
 

@@ -1,0 +1,8 @@
+[package]
+name = "fixture-mutation-strong"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Standalone: not part of the Qualyx workspace.
+[workspace]

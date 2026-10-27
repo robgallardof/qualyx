@@ -168,6 +168,25 @@ pub fn markdown(m: &RunManifest) -> String {
                 );
             }
         }
+        let skipped: Vec<_> = r
+            .tests
+            .iter()
+            .filter(|t| t.status == Status::Skipped)
+            .collect();
+        if !skipped.is_empty() {
+            let _ = writeln!(s, "\n### Skipped ({})\n", skipped.len());
+            for t in skipped {
+                let _ = writeln!(
+                    s,
+                    "- `{}`{}",
+                    t.name,
+                    t.message
+                        .as_deref()
+                        .map(|m| format!(": {}", cell(m)))
+                        .unwrap_or_default()
+                );
+            }
+        }
         let failures: Vec<_> = r
             .tests
             .iter()

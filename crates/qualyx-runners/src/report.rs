@@ -78,6 +78,8 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
     let mut current: Option<TestCase> = None;
     // Text inside <failure>/<error>/<skipped>: usually the traceback with file:line.
     let mut body: Option<String> = None;
+    // A testcase may carry several <failure> elements (Schemathesis does); keep them all.
+    let mut earlier: Option<String> = None;
 
     loop {
         let event = r.read_event().map_err(err)?;
@@ -101,13 +103,20 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                     }
                     tag @ ("failure" | "error" | "skipped") => {
                         if let Some(tc) = current.as_mut() {
+                            earlier = if matches!(tc.status, Status::Failed | Status::Error) {
+                                tc.message.take()
+                            } else {
+                                None
+                            };
                             tc.status = match tag {
                                 "failure" => Status::Failed,
                                 "error" => Status::Error,
                                 _ => Status::Skipped,
                             };
                             tc.message = attr(e, "message")?.map(|m| truncate(&m));
-                            if !empty {
+                            if empty {
+                                tc.message = join(earlier.take(), tc.message.take());
+                            } else {
                                 body = Some(String::new());
                             }
                         }
@@ -134,7 +143,8 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
             Event::End(e) => match e.name().as_ref() {
                 "failure" | "error" | "skipped" => {
                     if let (Some(tc), Some(b)) = (current.as_mut(), body.take()) {
-                        tc.message = merge(tc.message.take(), &b);
+                        let this = merge(tc.message.take(), &b);
+                        tc.message = join(earlier.take(), this);
                     }
                 }
                 "testcase" => tests.extend(current.take()),
@@ -145,6 +155,19 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
         }
     }
     Ok(tests)
+}
+
+fn join(a: Option<String>, b: Option<String>) -> Option<String> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(truncate(&format!(
+            "{a}
+
+---
+
+{b}"
+        ))),
+        (a, b) => a.or(b),
+    }
 }
 
 /// The summary message first, then the detail (traceback) when it adds something.
@@ -318,6 +341,13 @@ mod tests {
             m.contains("Expected: \"Welcome, demo\"") && m.contains("login.spec.js:24:41"),
             "{m}"
         );
+    }
+
+    #[test]
+    fn junit_keeps_every_failure_of_a_testcase() {
+        let xml = r#"<testsuite><testcase name="GET /items/{id}"><failure message="ST101">501 TRACE</failure><failure message="ST101">500 boom</failure></testcase></testsuite>"#;
+        let m = parse_junit(xml).unwrap()[0].message.clone().unwrap();
+        assert!(m.contains("501 TRACE") && m.contains("500 boom"), "{m}");
     }
 
     #[test]

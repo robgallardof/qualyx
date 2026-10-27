@@ -114,3 +114,44 @@ fn login_flows_pass_and_fail_with_evidence() {
         assert!(failed.screenshot.is_some());
     }
 }
+
+#[test]
+fn axe_finds_seeded_accessibility_bugs_and_not_on_the_clean_page() {
+    if !enabled() {
+        return;
+    }
+    let axe = qualyx_browser::a11y::axe_source(None).unwrap();
+    let server = Server::start_dir(&web("site")).unwrap();
+    for b in browsers() {
+        let mut d = qualyx_browser::launch(&b, true).unwrap();
+        let bad = server.url("/a11y-bad.html");
+        d.navigate(&bad).unwrap();
+        let r =
+            qualyx_browser::a11y::audit(d.as_mut(), &bad, &axe, qualyx_browser::a11y::DEFAULT_TAGS)
+                .unwrap();
+        let ids: Vec<&str> = r.violations.iter().map(|v| v.id.as_str()).collect();
+        eprintln!("{} {} {:?}", b.id, r.axe_version, ids);
+        for seeded in ["image-alt", "label", "color-contrast"] {
+            assert!(
+                ids.contains(&seeded),
+                "{}: {seeded} not reported: {ids:?}",
+                b.id
+            );
+        }
+        let good = server.url("/login.html");
+        d.navigate(&good).unwrap();
+        let r = qualyx_browser::a11y::audit(
+            d.as_mut(),
+            &good,
+            &axe,
+            qualyx_browser::a11y::DEFAULT_TAGS,
+        )
+        .unwrap();
+        assert!(
+            r.violations.is_empty(),
+            "{}: false positives on the clean page: {:?}",
+            b.id,
+            r.violations
+        );
+    }
+}

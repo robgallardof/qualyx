@@ -65,6 +65,13 @@
         "null"
       ]
     },
+    "services": {
+      "description": "Services started for the run (`QUALYX_SVC_*=host:port`), from a Compose file.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "started_at": {
       "type": "string",
       "format": "date-time"

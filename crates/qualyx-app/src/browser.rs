@@ -178,6 +178,82 @@ pub fn browse(project: &Path, req: &BrowseRequest) -> Result<BrowseReport> {
     Ok(report)
 }
 
+/// axe-core audit of `url` (or `page` under a served `serve_dir`) in each chosen browser.
+pub fn a11y(
+    project: &Path,
+    url: Option<&str>,
+    serve_dir: Option<&Path>,
+    page: &str,
+    browsers: &[String],
+    restrict_origins: bool,
+) -> Result<Vec<qualyx_browser::a11y::A11yReport>> {
+    let root = discover(project)?.root;
+    let server = match serve_dir {
+        Some(d) => {
+            Some(qualyx_browser::serve::Server::start_dir(d).map_err(|e| anyhow::anyhow!(e))?)
+        }
+        None => None,
+    };
+    let target = match (&server, url) {
+        (Some(s), _) => s.url(page),
+        (None, Some(u)) => u.to_string(),
+        (None, None) => bail!("give a URL or a directory to serve"),
+    };
+    if restrict_origins {
+        let allowed = fs::read_to_string(Layout::new(&root).config())
+            .ok()
+            .and_then(|t| toml::from_str::<ConfigWithBrowser>(&t).ok())
+            .unwrap_or_default()
+            .browser
+            .allowed_origins;
+        if !origin_allowed(&target, &allowed) {
+            bail!("{target} is not loopback and not in [browser] allowed_origins");
+        }
+    }
+    let axe = qualyx_browser::a11y::axe_source(Some(&root)).map_err(|e| anyhow::anyhow!(e))?;
+    let installed = qualyx_browser::detect();
+    let chosen: Vec<Browser> = if browsers.is_empty() {
+        installed.into_iter().take(1).collect()
+    } else {
+        browsers
+            .iter()
+            .map(|id| {
+                installed
+                    .iter()
+                    .find(|b| &b.id == id)
+                    .cloned()
+                    .with_context(|| format!("browser `{id}` is not installed"))
+            })
+            .collect::<Result<_>>()?
+    };
+    if chosen.is_empty() {
+        bail!("no supported browser is installed");
+    }
+    let mut out = Vec::new();
+    for b in &chosen {
+        let mut d = qualyx_browser::launch(b, true).map_err(|e| anyhow::anyhow!(e))?;
+        d.navigate(&target).map_err(|e| anyhow::anyhow!(e))?;
+        out.push(
+            qualyx_browser::a11y::audit(
+                d.as_mut(),
+                &target,
+                &axe,
+                qualyx_browser::a11y::DEFAULT_TAGS,
+            )
+            .map_err(|e| anyhow::anyhow!(e))?,
+        );
+    }
+    let layout = Layout::new(&root);
+    layout.ensure()?;
+    let dir = layout.run_dir(&qualyx_store::new_run_id(chrono::Utc::now()));
+    fs::create_dir_all(&dir)?;
+    fs::write(
+        dir.join("a11y-report.json"),
+        serde_json::to_vec_pretty(&out)?,
+    )?;
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

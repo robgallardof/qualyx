@@ -274,6 +274,9 @@ pub struct RunManifest {
     /// Set when only part of the project ran (impact analysis), with the reason.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selection: Option<String>,
+    /// Services started for the run (`QUALYX_SVC_*=host:port`), from a Compose file.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub services: Vec<String>,
     pub started_at: DateTime<Utc>,
     pub finished_at: DateTime<Utc>,
     pub status: Status,

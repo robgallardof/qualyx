@@ -1,0 +1,12 @@
+# Test environment for the compose fixture: Qualyx brings it up, exports the published port
+# as QUALYX_SVC_WEB_80, runs the tests and tears everything down.
+services:
+  web:
+    image: docker.io/library/nginx:1.27-alpine
+    ports:
+      - "127.0.0.1::80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 1s
+      timeout: 2s
+      retries: 20

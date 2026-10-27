@@ -138,7 +138,32 @@ pub fn security_scan(project: &Path, scanners: &[Scanner]) -> Result<(SecurityRe
     } else {
         scanners.to_vec()
     };
-    let r = qualyx_security::scan(&root, &list, &out, Duration::from_secs(1800))?;
+    let mut r = qualyx_security::scan(&root, &list, &out, Duration::from_secs(1800))?;
+    // Reviewed false positives move to `suppressed` with their reason; they stay visible.
+    let rules = crate::quality::load_suppressions(&root)?;
+    if !rules.is_empty() {
+        let (kept, gone): (Vec<_>, Vec<_>) = r
+            .findings
+            .into_iter()
+            .partition(|f| crate::quality::suppressed_by(f, &rules).is_none());
+        r.suppressed = gone
+            .into_iter()
+            .map(|f| {
+                let reason = crate::quality::suppressed_by(&f, &rules)
+                    .map(|s| s.reason.clone())
+                    .unwrap_or_default();
+                (f, reason)
+            })
+            .collect();
+        r.findings = kept;
+        if r.status == "findings" && r.findings.is_empty() {
+            r.status = "clean".into();
+        }
+        fs::write(
+            out.join("security-report.json"),
+            serde_json::to_vec_pretty(&r)?,
+        )?;
+    }
     Ok((r, out))
 }
 

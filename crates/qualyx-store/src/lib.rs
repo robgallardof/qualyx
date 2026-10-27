@@ -307,6 +307,7 @@ mod tests {
             arch: "x86_64".into(),
             isolation: Isolation::Process,
             selection: None,
+            services: vec![],
             started_at: at,
             finished_at: at,
             status,

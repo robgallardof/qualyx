@@ -10,6 +10,7 @@
 //!
 //! Nothing here claims a browser works until [`smoke`] has driven it for real.
 
+pub mod a11y;
 pub mod bidi;
 pub mod cdp;
 pub mod detect;

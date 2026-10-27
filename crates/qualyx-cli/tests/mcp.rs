@@ -136,6 +136,7 @@ fn lists_tools_with_schemas() {
     assert_eq!(
         names,
         [
+            "qa_a11y",
             "qa_analyze_failure",
             "qa_browser_session",
             "qa_cancel",
@@ -143,10 +144,12 @@ fn lists_tools_with_schemas() {
             "qa_desktop_session",
             "qa_discover",
             "qa_doctor",
+            "qa_flaky",
             "qa_get_artifact",
             "qa_list_runs",
             "qa_performance_run",
             "qa_report",
+            "qa_review",
             "qa_run",
             "qa_run_status",
             "qa_security_scan",

@@ -191,6 +191,9 @@ pub struct SecurityReport {
     pub status: String,
     pub scanners: Vec<ScannerResult>,
     pub findings: Vec<Finding>,
+    /// Findings a human marked as false positives, with the reason. Reported, never hidden.
+    #[serde(default)]
+    pub suppressed: Vec<(Finding, String)>,
     pub merged_sarif: Option<String>,
 }
 
@@ -314,6 +317,7 @@ pub fn scan(
         status: status.into(),
         scanners: results,
         findings,
+        suppressed: Vec::new(),
         merged_sarif,
     };
     fs::write(

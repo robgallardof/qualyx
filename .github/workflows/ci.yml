@@ -99,10 +99,19 @@ jobs:
           tar -xzf trivy.tgz trivy
           chmod +x k6 gitleaks osv-scanner trivy
           python -m pip install -q semgrep==1.182.1
+          python -m pip install -q schemathesis==4.32.5
           echo "$HOME/tools" >> "$GITHUB_PATH"
+      - name: Install cargo-mutants (pinned)
+        run: cargo install cargo-mutants --version 27.1.0 --locked
       - run: docker pull ghcr.io/zaproxy/zaproxy:stable
       - run: cargo test --locked -p qualyx-perf -p qualyx-security -- --nocapture --test-threads=1
         env:
           QUALYX_TEST_K6: "1"
           QUALYX_TEST_SCANNERS: "1"
           QUALYX_TEST_ZAP: "1"
+      - name: Quality depth (mutation, contract, compose)
+        run: cargo test --locked -p qualyx-cli --test quality -- --nocapture --test-threads=2
+        env:
+          QUALYX_TEST_MUTANTS: "1"
+          QUALYX_TEST_SCHEMATHESIS: "1"
+          QUALYX_TEST_DOCKER: "1"
