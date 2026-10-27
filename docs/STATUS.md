@@ -7,6 +7,7 @@ Last updated: 2026-10-26.
 | M0 — research & threat model | **done** | [integration matrix](m0/integration-matrix.md), [threat model](m0/threat-model.md), ADRs [0001](adr/0001-rust-workspace.md)–[0005](adr/0005-adapter-sdk.md) |
 | M1 — deterministic vertical slice | **done** (Windows, Linux, macOS) | below |
 | M2 — MCP + isolation | **done** | below, [client matrix](m2/clients.md) |
+| M3 — repository intelligence + agents | **done** | below, [benchmark](m3/benchmark.md) |
 
 ## M1 gate
 
@@ -61,6 +62,21 @@ Python 3.13 and pytest 8.3.5.
 | Evidence integrity | `artifact_sha256` in the manifest, `qualyx verify` / `qa_verify` |
 | Container runner | `--isolation container`: a copy of the project, `--cap-drop=ALL`, `no-new-privileges`, pids/memory limits. Python and Node verified with Docker 29.8 locally and on ubuntu CI. Rust (`rust:1`) and .NET (`dotnet/sdk:10.0`) images are wired but **not yet verified** |
 | Named clients | Claude Code 2.1.311 and Codex CLI 0.164.0 called `qa_discover` for real (see [clients](m2/clients.md)) |
+
+## M3 gate
+
+> Reproducible impact results; benchmark token/time against a full-rescan baseline.
+
+| Requirement | Evidence |
+|---|---|
+| Incremental index, change detection | git (`base...HEAD` + working tree + untracked) or SHA-256 content index (`qualyx index`). Both tested end to end |
+| Impact analysis | Rust: owning package via `cargo metadata` + transitive dependents. Data files select the packages that reference them by name. Unsure means the whole ecosystem, with a reason. 12 unit tests on real git workspaces |
+| Reproducible results + benchmark | [benchmark](m3/benchmark.md): same selection on every repetition, 61–67 % fewer tests, docs-only changes run nothing |
+| Supervisor task DAG | `qualyx-scheduler`: concurrency cap, budget, cancel, cycle detection, failure skips dependents. `qualyx test --jobs N` |
+| Worktree isolation | `qualyx worktree create/list/remove` with an atomic single-writer lock |
+| Failure triage role | `qualyx triage` / `qa_analyze_failure`. The reproduction command was executed in tests for Rust, Python, Node and .NET, and it re-fails exactly the broken test |
+| LLM abstraction | `qualyx-llm`: openai-compatible (DeepSeek, OpenAI, Ollama, vLLM) and anthropic, contract-tested against a local HTTP server. **No live provider verified**: no API key or local model was available on the test machine. `qualyx llm-probe` checks a real endpoint |
+| Serena / Graphify / Context7 | not wired in: Qualyx's impact analysis doesn't need them. They stay optional MCP servers an agent can run beside Qualyx (see the [integration matrix](m0/integration-matrix.md)) |
 
 ## Known limitations (M1)
 
