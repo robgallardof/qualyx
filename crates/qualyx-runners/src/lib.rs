@@ -21,6 +21,9 @@ use qualyx_core::{
 };
 use sha2::{Digest, Sha256};
 
+/// Lines of the tool log copied into the notes when a runner errors without test results.
+const LOG_TAIL_LINES: usize = 15;
+
 pub use process::CancelToken;
 pub use tools::runner_for;
 
@@ -205,6 +208,14 @@ pub fn execute(
             &mut notes,
         )
     };
+    // When the tool died before reporting tests, the log tail is the only explanation.
+    if status == Status::Error && collected.tests.is_empty() {
+        let tail: Vec<&str> = log.lines().filter(|l| !l.trim().is_empty()).collect();
+        let tail = tail[tail.len().saturating_sub(LOG_TAIL_LINES)..].join("\n");
+        if !tail.is_empty() {
+            notes.push(format!("log tail:\n{}", redact::redact(&tail)));
+        }
+    }
 
     let mut artifacts = vec![log_name];
     artifacts.extend(collected.artifacts);
