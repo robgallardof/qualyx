@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProjectProfile",
+  "description": "Result of `qualyx discover`.",
+  "type": "object",
+  "properties": {
+    "ecosystems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DetectedEcosystem"
+      }
+    },
+    "root": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "root",
+    "ecosystems"
+  ],
+  "$defs": {
+    "DetectedEcosystem": {
+      "description": "One ecosystem found in a project, with the evidence that identified it.",
+      "type": "object",
+      "properties": {
+        "ecosystem": {
+          "$ref": "#/$defs/Ecosystem"
+        },
+        "manifest": {
+          "description": "File that proves the ecosystem, relative to the project root (forward slashes).",
+          "type": "string"
+        },
+        "notes": {
+          "description": "Human-readable caveats, e.g. why only the exit code is trusted.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "target": {
+          "description": "Optional target passed to the tool (e.g. a `.sln` for `dotnet test`).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool": {
+          "$ref": "#/$defs/TestTool"
+        }
+      },
+      "required": [
+        "ecosystem",
+        "tool",
+        "manifest"
+      ]
+    },
+    "Ecosystem": {
+      "description": "A language/build ecosystem Qualyx knows how to discover and test.",
+      "type": "string",
+      "enum": [
+        "rust",
+        "dotnet",
+        "node",
+        "python"
+      ]
+    },
+    "TestTool": {
+      "description": "The native tool Qualyx drives for an ecosystem.",
+      "oneOf": [
+        {
+          "description": "`cargo test`, results parsed from its text output.",
+          "type": "string",
+          "const": "cargo-test"
+        },
+        {
+          "description": "`dotnet test` with the TRX logger.",
+          "type": "string",
+          "const": "dotnet-test"
+        },
+        {
+          "description": "`npm test` whose script is `node --test`, with the JUnit reporter.",
+          "type": "string",
+          "const": "node-test"
+        },
+        {
+          "description": "`npm test` with an unknown runner: only the exit code is trusted.",
+          "type": "string",
+          "const": "npm-script"
+        },
+        {
+          "description": "`python -m pytest` with `--junitxml`.",
+          "type": "string",
+          "const": "pytest"
+        }
+      ]
+    }
+  }
+}

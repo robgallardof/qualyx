@@ -9,3 +9,11 @@ artifacts/
 .idea/
 .vscode/
 .DS_Store
+
+# Fixture build outputs
+fixtures/**/target/
+fixtures/**/bin/
+fixtures/**/obj/
+fixtures/**/node_modules/
+__pycache__/
+.pytest_cache/

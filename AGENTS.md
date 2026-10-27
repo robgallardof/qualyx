@@ -5,10 +5,20 @@ Canonical instructions for any coding agent (Claude Code, Codex, OpenCode, Antig
 
 ## What this is
 Qualyx is a Rust-first, local-first QA execution and orchestration platform (CLI + MCP, optional
-API/dashboard) with a deterministic no-LLM mode. Status: **planning — no code yet**.
+API/dashboard) with a deterministic no-LLM mode. Status: **M0 and M1 done; next is M2 (MCP +
+isolation)**. Read [`docs/STATUS.md`](docs/STATUS.md) first.
 
 - Full brief: [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md)
 - Architecture, milestones, gates: [`docs/PLANNING.md`](docs/PLANNING.md)
+- Decisions: [`docs/adr/`](docs/adr/) · threat model: [`docs/m0/threat-model.md`](docs/m0/threat-model.md)
+
+## Layout and commands
+- `crates/qualyx-core` domain types · `qualyx-discovery` · `qualyx-runners` · `qualyx-store` ·
+  `qualyx-cli` (binary `qualyx`, composition root only).
+- `fixtures/<ecosystem>/{passing,failing}`: seeded projects. The failing ones carry one known bug.
+- `schemas/`: generated JSON Schemas. Regenerate with `cargo run -p qualyx-cli -- schema --out schemas`.
+- Before committing: `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`,
+  `cargo test --workspace`. The end-to-end tests need cargo, dotnet 10, node 24 and python + pytest.
 
 ## Rules
 - Work milestone by milestone, starting at M0 → M1. Do not jump ahead or batch the roadmap.

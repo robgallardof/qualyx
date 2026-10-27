@@ -1,0 +1,320 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RunManifest",
+  "description": "The evidence record of one `qualyx test` run. Written once as `manifest.json`.",
+  "type": "object",
+  "properties": {
+    "arch": {
+      "type": "string"
+    },
+    "counts": {
+      "$ref": "#/$defs/Counts"
+    },
+    "finished_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "git": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/GitInfo"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "os": {
+      "type": "string"
+    },
+    "project_root": {
+      "type": "string"
+    },
+    "qualyx_version": {
+      "type": "string"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "runners": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RunnerResult"
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "$ref": "#/$defs/Status"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "qualyx_version",
+    "project_root",
+    "os",
+    "arch",
+    "started_at",
+    "finished_at",
+    "status",
+    "counts",
+    "runners"
+  ],
+  "$defs": {
+    "Counts": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "skipped": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "total": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "total",
+        "passed",
+        "failed",
+        "skipped",
+        "errors"
+      ]
+    },
+    "Detail": {
+      "description": "How much of a runner's result is backed by per-test evidence.",
+      "oneOf": [
+        {
+          "description": "Every test was parsed from a structured report or the tool's output.",
+          "type": "string",
+          "const": "per-test"
+        },
+        {
+          "description": "Only the process exit code is known.",
+          "type": "string",
+          "const": "exit-code-only"
+        }
+      ]
+    },
+    "Ecosystem": {
+      "description": "A language/build ecosystem Qualyx knows how to discover and test.",
+      "type": "string",
+      "enum": [
+        "rust",
+        "dotnet",
+        "node",
+        "python"
+      ]
+    },
+    "GitInfo": {
+      "description": "Source control state of the project when the run started.",
+      "type": "object",
+      "properties": {
+        "commit": {
+          "type": "string"
+        },
+        "dirty": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "commit",
+        "dirty"
+      ]
+    },
+    "RunnerResult": {
+      "description": "Everything known about one native tool invocation.",
+      "type": "object",
+      "properties": {
+        "artifacts": {
+          "description": "Artifact paths relative to the run directory (logs, JUnit, TRX).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "command": {
+          "description": "Exact program and arguments executed (no shell involved).",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "counts": {
+          "$ref": "#/$defs/Counts"
+        },
+        "detail": {
+          "$ref": "#/$defs/Detail"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "ecosystem": {
+          "$ref": "#/$defs/Ecosystem"
+        },
+        "exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32"
+        },
+        "finished_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "description": "Why the status is what it is, when it isn't obvious from the tests.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TestCase"
+          }
+        },
+        "timed_out": {
+          "type": "boolean"
+        },
+        "tool": {
+          "$ref": "#/$defs/TestTool"
+        },
+        "tool_version": {
+          "description": "First line of `<tool> --version`, if it could be obtained.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "ecosystem",
+        "tool",
+        "command",
+        "timed_out",
+        "started_at",
+        "finished_at",
+        "duration_ms",
+        "status",
+        "detail",
+        "counts",
+        "tests",
+        "artifacts"
+      ]
+    },
+    "Status": {
+      "description": "Outcome of a single test, a runner or a whole run.\n\n`Inconclusive` means Qualyx could not prove pass or fail, and it never counts as green.",
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed",
+        "skipped",
+        "error",
+        "inconclusive"
+      ]
+    },
+    "TestCase": {
+      "type": "object",
+      "properties": {
+        "duration_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "message": {
+          "description": "Failure/skip message, truncated.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/Status"
+        },
+        "suite": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "status"
+      ]
+    },
+    "TestTool": {
+      "description": "The native tool Qualyx drives for an ecosystem.",
+      "oneOf": [
+        {
+          "description": "`cargo test`, results parsed from its text output.",
+          "type": "string",
+          "const": "cargo-test"
+        },
+        {
+          "description": "`dotnet test` with the TRX logger.",
+          "type": "string",
+          "const": "dotnet-test"
+        },
+        {
+          "description": "`npm test` whose script is `node --test`, with the JUnit reporter.",
+          "type": "string",
+          "const": "node-test"
+        },
+        {
+          "description": "`npm test` with an unknown runner: only the exit code is trusted.",
+          "type": "string",
+          "const": "npm-script"
+        },
+        {
+          "description": "`python -m pytest` with `--junitxml`.",
+          "type": "string",
+          "const": "pytest"
+        }
+      ]
+    }
+  }
+}

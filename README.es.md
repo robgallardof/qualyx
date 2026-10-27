@@ -4,17 +4,44 @@
 
 Qualyx es una plataforma de ingeniería de calidad hecha en Rust. Busca las pruebas que ya tiene un
 proyecto, las corre con el runner propio de cada lenguaje y entrega un reporte con evidencia: qué
-comandos se ejecutaron, con qué versiones, qué pasó, qué falló y qué se saltó. Se puede usar desde
-la terminal o desde cualquier agente compatible con MCP. La IA es opcional, y el modo
-determinista funciona sin ningún modelo.
+comandos se ejecutaron, con qué versiones, qué pasó, qué falló y qué se saltó. Ya se puede usar
+desde la terminal, y desde cualquier agente compatible con MCP cuando llegue M2. La IA es
+opcional, y el modo determinista funciona sin ningún modelo.
 
-> **Estado:** en planeación. Todavía no hay código usable. El roadmap empieza en M0 (investigación
-> y modelo de amenazas) y M1 (una CLI que descubre un repo, corre sus pruebas y genera un reporte).
+> **Estado:** M0 y M1 están terminados. La CLI detecta proyectos de Rust, .NET, Node y Python,
+> corre sus pruebas y guarda la evidencia. En [docs/STATUS.md](docs/STATUS.md) está lo que ya
+> se verificó y lo que todavía no.
+
+## Pruébalo
+
+```sh
+cargo install --path crates/qualyx-cli   # instala el binario `qualyx`
+
+qualyx doctor  ruta/al/proyecto   # qué toolchains hay instaladas y cuáles necesita el proyecto
+qualyx discover ruta/al/proyecto  # qué encontró Qualyx y con qué herramienta lo va a correr
+qualyx test    ruta/al/proyecto   # corre las pruebas; sale con 0 verde, 1 fallos, 2 sin probar
+qualyx report  ruta/al/proyecto   # la última corrida (--list, --run <id>, --format markdown|json)
+```
+
+Cada corrida deja su evidencia en `.qualyx/runs/<run-id>/`: `manifest.json` (comandos, códigos de
+salida, versiones, commit y cada prueba), `report.md` y los logs y reportes nativos. La carpeta
+`.qualyx/` se ignora a sí misma, así que nunca termina en git.
+
+| Ecosistema | Herramienta | Evidencia |
+|---|---|---|
+| Rust | `cargo test` | por prueba (salida de libtest) |
+| .NET | `dotnet test` | por prueba (TRX) |
+| Node | `npm test` → `node --test` | por prueba (JUnit) |
+| Node, cualquier otro runner | `npm test` | solo código de salida, y el reporte lo dice |
+| Python | `python -m pytest` | por prueba (JUnit) |
 
 ## Documentos
 
+- [Estado](docs/STATUS.md): lo verificado, con su evidencia, y las limitaciones conocidas.
 - [Planeación](docs/PLANNING.md): arquitectura, agentes, integraciones, hitos y criterios de salida.
 - [Prompt maestro](docs/MASTER_PROMPT.md): las instrucciones completas para los agentes que lo construyen.
+- [Matriz de integraciones](docs/m0/integration-matrix.md), [modelo de amenazas](docs/m0/threat-model.md),
+  [ADRs](docs/adr/).
 - [AGENTS.md](AGENTS.md): las reglas de trabajo para cualquier agente que contribuya.
 
 ## Principios
