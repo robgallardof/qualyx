@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="282" viewBox="0 0 600 282" role="img" aria-label="Native tools: Finds the tests and runs them with the project&#x27;s own runner. No AI model is needed to execute." data-readme-component="card"><title>Native tools: Finds the tests and runs them with the project&#x27;s own runner. No AI model is needed to execute.</title><defs><linearGradient id="kb" x2="1" y2="0"><stop stop-color="#0284c7"/><stop offset=".55" stop-color="#0891b2"/><stop offset="1" stop-color="#14b8a6"/></linearGradient><linearGradient id="kbd" x2="1" y2="1"><stop stop-color="#0284c7"/><stop offset=".55" stop-color="#0891b2"/><stop offset="1" stop-color="#14b8a6"/></linearGradient></defs><style>text{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',Inter,Arial,sans-serif}.live{animation:live 2.4s ease-in-out infinite}@keyframes live{0%,100%{opacity:1}50%{opacity:.25}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style><g transform="translate(8 8)"><rect x=".75" y=".75" width="582.5" height="264.5" rx="20" fill="#10162a" stroke="#253150" stroke-width="1.5"/><path d="M28 .75h150" stroke="url(#kb)" stroke-width="3" stroke-linecap="round"/><rect x="26" y="28" width="54" height="54" rx="16" fill="url(#kbd)" opacity=".16"/><rect x="26.75" y="28.75" width="52.5" height="52.5" rx="15.5" fill="none" stroke="url(#kbd)" stroke-opacity=".55"/><g transform="translate(40 42) scale(1.08333)" fill="none" stroke="#a78bfa" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m6 9 3 3-3 3m6 0h5"/></g><text x="98" y="54" font-size="23" font-weight="750" fill="#e8edf7" text-anchor="start" letter-spacing="-.3">Native tools</text><text x="99" y="77" font-size="12.5" font-weight="650" fill="#9aa7bf" text-anchor="start" letter-spacing="1.6">RUNS</text><g transform="rotate(-45 546 46)"><g transform="translate(535 35) scale(0.916667)" fill="none" stroke="#9aa7bf" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><!-- ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+—-
+
+The following Lucide icons are derived from the Feather project:
+
+airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
+
+The MIT License (MIT) (for the icons listed above)
+
+Copyright (c) 2013-present Cole Bemis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+ --><path d="M5 12h14" />
+  <path d="m12 5 7 7-7 7" />
+</g></g><text x="28" y="116" font-size="17" font-weight="400" fill="#9aa7bf" text-anchor="start">Finds the tests and runs them with the project&#x27;s own runner.</text><text x="28" y="140" font-size="17" font-weight="400" fill="#9aa7bf" text-anchor="start">No AI model is needed to execute.</text><rect x="28" y="216" width="60.9198" height="28" rx="8" fill="#151c33" stroke="#253150"/><text x="58.4599" y="234.5" font-size="13.5" font-weight="600" fill="#e8edf7" text-anchor="middle">cargo</text><rect x="96.9198" y="216" width="66.3576" height="28" rx="8" fill="#151c33" stroke="#253150"/><text x="130.099" y="234.5" font-size="13.5" font-weight="600" fill="#e8edf7" text-anchor="middle">dotnet</text><rect x="171.277" y="216" width="52.0476" height="28" rx="8" fill="#151c33" stroke="#253150"/><text x="197.301" y="234.5" font-size="13.5" font-weight="600" fill="#e8edf7" text-anchor="middle">npm</text><rect x="231.325" y="216" width="66.3576" height="28" rx="8" fill="#151c33" stroke="#253150"/><text x="264.504" y="234.5" font-size="13.5" font-weight="600" fill="#e8edf7" text-anchor="middle">pytest</text></g></svg>

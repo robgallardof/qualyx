@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "theme": "ocean",
+  "assets": "assets/readme-builder/kit",
+  "blocks": [
+    {"id": "why", "type": "cards", "items": [
+      {"title": {"en": "Native tools", "es": "Herramientas nativas"}, "icon": "terminal", "kicker": {"en": "Runs", "es": "Ejecuta"},
+       "href": "#evidence", "tags": ["cargo", "dotnet", "npm", "pytest"],
+       "text": {"en": "Finds the tests and runs them with the project's own runner. No AI model is needed to execute.",
+                "es": "Encuentra las pruebas y las corre con el runner del propio proyecto. No necesita un modelo de IA para ejecutar."}},
+      {"title": {"en": "Evidence kept", "es": "Evidencia guardada"}, "icon": "file", "kicker": {"en": "Proof", "es": "Prueba"},
+       "href": "#evidence",
+       "text": {"en": "Every run stores the commands, versions, commit, exit codes, native reports and logs, with SHA-256 checks.",
+                "es": "Cada ejecución guarda comandos, versiones, commit, códigos de salida, reportes nativos y logs, con SHA-256."}},
+      {"title": {"en": "Agents over MCP", "es": "Agentes por MCP"}, "icon": "bot", "kicker": "MCP",
+       "href": "#agents", "tags": ["Claude Code", "Codex"],
+       "text": {"en": "Discover, run, triage and verify from your agent. Reads are marked read-only; running asks first.",
+                "es": "Descubre, ejecuta, analiza y verifica desde tu agente. Las lecturas son de solo lectura; ejecutar pide permiso."}},
+      {"title": {"en": "Web console", "es": "Consola web"}, "icon": "chart", "kicker": {"en": "History", "es": "Historial"}, "badge": {"en": "New", "es": "Nuevo"},
+       "href": "#console", "tags": ["Next.js"],
+       "text": {"en": "A read-only console embedded in the binary: run history, filters, reports, light and dark, English and Spanish.",
+                "es": "Una consola de solo lectura dentro del binario: historial, filtros, reportes, claro y oscuro, inglés y español."}}
+    ]},
+    {"id": "tools", "type": "panels", "style": "chips", "columns": 2, "groups": [
+      {"title": {"en": "Discover and run", "es": "Descubrir y ejecutar"}, "icon": "rocket",
+       "items": ["qa_capabilities", "qa_discover", "qa_doctor", "qa_run", "qa_run_status", "qa_cancel"]},
+      {"title": {"en": "Evidence", "es": "Evidencia"}, "icon": "file",
+       "items": ["qa_report", "qa_list_runs", "qa_get_artifact", "qa_verify"]},
+      {"title": {"en": "Analysis", "es": "Análisis"}, "icon": "search",
+       "items": ["qa_analyze_failure", "qa_flaky", "qa_test_impact", "qa_review"]},
+      {"title": {"en": "Adapters", "es": "Adaptadores"}, "icon": "shield",
+       "items": ["qa_browser_session", "qa_desktop_session", "qa_performance_run", "qa_security_scan"]}
+    ]},
+    {"id": "agent-links", "type": "buttons", "items": [
+      {"label": {"en": "Client matrix", "es": "Matriz de clientes"}, "href": "docs/m2/clients.md", "icon": "check", "variant": "primary", "trailing": true},
+      {"label": {"en": "Security audit skill", "es": "Skill de auditoría"}, "href": "docs/m5/security-audit.md", "icon": "shield", "small": true},
+      {"label": {"en": "Status", "es": "Estado"}, "href": "docs/STATUS.md", "icon": "layers", "small": true}
+    ]}
+  ]
+}

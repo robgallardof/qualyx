@@ -1,0 +1,120 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Tu primera prueba con Qualyx",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/robgallardof/qualyx.git",
+      "revision": "de9b8852ffaaf34cf1bc4dbd2d4c929ef8b89b45"
+    },
+    "output": ".archify/first-check-es-20261027-164829/diagram.html"
+  },
+  "lanes": [
+    {
+      "id": "you",
+      "label": "Tú o tu agente"
+    },
+    {
+      "id": "qualyx",
+      "label": "Qualyx en tu equipo"
+    }
+  ],
+  "mainPath": [
+    "step0",
+    "step1",
+    "step2",
+    "step3",
+    "step4"
+  ],
+  "nodes": [
+    {
+      "id": "step0",
+      "lane": "you",
+      "col": 0,
+      "type": "external",
+      "label": "Instalar una vez",
+      "sublabel": "cargo install",
+      "sources": [
+        {
+          "path": "crates/qualyx-cli/Cargo.toml"
+        }
+      ]
+    },
+    {
+      "id": "step1",
+      "lane": "qualyx",
+      "col": 1,
+      "type": "backend",
+      "label": "Encontrar pruebas",
+      "sublabel": "qualyx discover",
+      "sources": [
+        {
+          "path": "crates/qualyx-discovery/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "id": "step2",
+      "lane": "qualyx",
+      "col": 2,
+      "type": "backend",
+      "label": "Correr herramientas",
+      "sublabel": "cargo, dotnet, npm, pytest",
+      "sources": [
+        {
+          "path": "crates/qualyx-runners/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "id": "step3",
+      "lane": "qualyx",
+      "col": 3,
+      "type": "backend",
+      "label": "Guardar evidencia",
+      "sublabel": ".qualyx/runs/<id>",
+      "sources": [
+        {
+          "path": "crates/qualyx-store/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "id": "step4",
+      "lane": "you",
+      "col": 4,
+      "type": "frontend",
+      "label": "Revisar el resultado",
+      "sublabel": "reporte, MCP o consola",
+      "sources": [
+        {
+          "path": "crates/qualyx-api/src/lib.rs"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge0",
+      "from": "step0",
+      "to": "step1"
+    },
+    {
+      "id": "edge1",
+      "from": "step1",
+      "to": "step2"
+    },
+    {
+      "id": "edge2",
+      "from": "step2",
+      "to": "step3"
+    },
+    {
+      "id": "edge3",
+      "from": "step3",
+      "to": "step4"
+    }
+  ]
+}
