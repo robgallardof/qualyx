@@ -9,9 +9,13 @@
 //!   runs/<run-id>/manifest.json, report.md, <ecosystem>.log, native reports
 //! ```
 
+pub mod pg;
+pub mod queue;
+
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use chrono::{DateTime, Utc};
 use qualyx_core::{RunManifest, Status};
@@ -89,12 +93,14 @@ impl Layout {
     }
 }
 
-/// Sortable, collision-resistant, path-safe run id: `20261026T213015123Z-<pid hex>`.
+/// Sortable, path-safe run id with a process-local sequence for concurrent requests.
 pub fn new_run_id(now: DateTime<Utc>) -> String {
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
     format!(
-        "{}-{:x}",
+        "{}-{:x}-{:x}",
         now.format("%Y%m%dT%H%M%S%3fZ"),
-        std::process::id()
+        std::process::id(),
+        SEQUENCE.fetch_add(1, Ordering::Relaxed)
     )
 }
 
@@ -164,6 +170,42 @@ CREATE TABLE test_cases (
 );
 CREATE INDEX test_cases_by_name ON test_cases(name, status);
 "#];
+
+/// Where runs are indexed: the per-project SQLite file, or a shared PostgreSQL database.
+pub trait RunIndex {
+    fn insert_run(&mut self, m: &RunManifest, manifest_path: &Path) -> Result<()>;
+    fn latest_run_id(&mut self) -> Result<Option<String>>;
+    fn manifest_path(&mut self, run_id: &str) -> Result<Option<PathBuf>>;
+    fn list_runs(&mut self, limit: u32) -> Result<Vec<RunSummary>>;
+}
+
+/// `QUALYX_DATABASE_URL` (postgres://…) selects the shared index; otherwise SQLite.
+pub fn open_index(layout: &Layout, project_root: &Path) -> Result<Box<dyn RunIndex>> {
+    match std::env::var("QUALYX_DATABASE_URL") {
+        Ok(url) if !url.is_empty() => Ok(Box::new(pg::PgIndex::connect(&url, project_root)?)),
+        _ => Ok(Box::new(Store::open(&layout.db())?)),
+    }
+}
+
+/// True when an index exists for the project (always true with a shared database).
+pub fn index_exists(layout: &Layout) -> bool {
+    std::env::var("QUALYX_DATABASE_URL").is_ok_and(|u| !u.is_empty()) || layout.db().exists()
+}
+
+impl RunIndex for Store {
+    fn insert_run(&mut self, m: &RunManifest, manifest_path: &Path) -> Result<()> {
+        Store::insert_run(self, m, manifest_path)
+    }
+    fn latest_run_id(&mut self) -> Result<Option<String>> {
+        Store::latest_run_id(self)
+    }
+    fn manifest_path(&mut self, run_id: &str) -> Result<Option<PathBuf>> {
+        Store::manifest_path(self, run_id)
+    }
+    fn list_runs(&mut self, limit: u32) -> Result<Vec<RunSummary>> {
+        Store::list_runs(self, limit)
+    }
+}
 
 pub struct Store {
     conn: Connection,
@@ -392,8 +434,14 @@ mod tests {
 
     #[test]
     fn run_ids_are_path_safe() {
-        let id = new_run_id(Utc::now());
+        let now = Utc::now();
+        let id = new_run_id(now);
         assert!(is_valid_run_id(&id), "{id}");
+        assert_ne!(
+            new_run_id(now),
+            id,
+            "same-millisecond requests need distinct evidence directories"
+        );
         for bad in ["", "../x", "a/b", r"a\b", "a.b"] {
             assert!(!is_valid_run_id(bad), "{bad}");
         }

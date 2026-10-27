@@ -5,12 +5,13 @@
 Qualyx es una plataforma de ingeniería de calidad hecha en Rust. Busca las pruebas que ya tiene un
 proyecto, las corre con el runner propio de cada lenguaje y entrega un reporte con evidencia: qué
 comandos se ejecutaron, con qué versiones, qué pasó, qué falló y qué se saltó. Ya se puede usar
-desde la terminal, y desde cualquier agente compatible con MCP cuando llegue M2. La IA es
+desde la terminal y desde agentes compatibles con MCP. La IA es
 opcional, y el modo determinista funciona sin ningún modelo.
 
-> **Estado:** M0 y M1 están terminados. La CLI detecta proyectos de Rust, .NET, Node y Python,
-> corre sus pruebas y guarda la evidencia. En [docs/STATUS.md](docs/STATUS.md) está lo que ya
-> se verificó y lo que todavía no.
+> **Estado:** M0–M6 están implementados con el alcance documentado. M7 está en curso:
+> API HTTP autenticada, trabajadores separados, Compose, PostgreSQL y evidencia en S3.
+> Consulta la evidencia en [docs/STATUS.md](docs/STATUS.md) y la configuración y límites
+> en [la guía de M7](docs/m7/team.md).
 
 ## Pruébalo
 

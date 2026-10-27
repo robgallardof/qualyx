@@ -52,6 +52,12 @@ jobs:
       - name: Allow the Chrome sandbox on Ubuntu 24.04 (AppArmor userns restriction)
         if: matrix.os == 'ubuntu-latest'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Team PostgreSQL migrations and project isolation (real container)
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo test --locked -p qualyx-cli --test team shared_postgres_index -- --ignored --nocapture
+      - name: Durable team workers and signed S3 evidence (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: python scripts/test_team.py
       - name: Playwright browsers (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: npx -y playwright@1.64.1 install --with-deps chromium
@@ -73,6 +79,18 @@ jobs:
           cargo build --locked -p qualyx-cli
           ./target/debug/qualyx doctor fixtures/python/passing
           ./target/debug/qualyx discover fixtures/node/failing --json
+      - name: Extracted package installation smoke
+        run: python scripts/package.py --binary target/debug/qualyx${{ runner.os == 'Windows' && '.exe' || '' }} --target ${{ runner.os }}
+
+  team-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - run: docker build -t qualyx:team .
+      - run: python scripts/test_team_compose.py
 
   # M5 gate: seeded performance regression and seeded vulnerabilities detected with real
   # tools; unsafe targets blocked. Tools are pinned and verified against release checksums.

@@ -1,0 +1,90 @@
+name: qualyx-team
+
+x-qualyx-env: &qualyx-env
+  QUALYX_DATABASE_URL: postgres://qualyx:${QUALYX_POSTGRES_PASSWORD:?set QUALYX_POSTGRES_PASSWORD}@postgres/qualyx
+  QUALYX_S3_ENDPOINT: http://objects:8333
+  QUALYX_S3_BUCKET: evidence
+  QUALYX_S3_ACCESS_KEY: ${QUALYX_S3_ACCESS_KEY:?set QUALYX_S3_ACCESS_KEY}
+  QUALYX_S3_SECRET_KEY: ${QUALYX_S3_SECRET_KEY:?set QUALYX_S3_SECRET_KEY}
+  QUALYX_S3_ALLOW_HTTP: "1"
+
+x-runtime: &runtime
+  image: qualyx:team
+  build:
+    context: ../..
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 256
+  mem_limit: 1g
+  tmpfs:
+    - /tmp:size=256m,mode=1777
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    objects:
+      condition: service_started
+
+services:
+  api:
+    <<: *runtime
+    command: [serve, --team, --bind, "0.0.0.0:7878", --root, /projects]
+    environment:
+      <<: *qualyx-env
+      QUALYX_API_TOKEN: ${QUALYX_API_TOKEN:?set QUALYX_API_TOKEN}
+    volumes:
+      - ${QUALYX_PROJECTS_DIR:?set QUALYX_PROJECTS_DIR}:/projects:ro
+    ports:
+      - "127.0.0.1:${QUALYX_API_PORT:-7878}:7878"
+    networks: [backend, frontend]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7878/health', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 15
+
+  worker:
+    <<: *runtime
+    # Process execution is confined to this dedicated container, not the API or host.
+    command: [worker, --root, /projects, --allow-process]
+    environment:
+      <<: *qualyx-env
+    volumes:
+      - ${QUALYX_PROJECTS_DIR:?set QUALYX_PROJECTS_DIR}:/projects
+    networks: [backend]
+    stop_grace_period: 30s
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: qualyx
+      POSTGRES_USER: qualyx
+      POSTGRES_PASSWORD: ${QUALYX_POSTGRES_PASSWORD:?set QUALYX_POSTGRES_PASSWORD}
+    volumes: [postgres:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U qualyx -d qualyx]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  objects:
+    image: chrislusf/seaweedfs:4.17@sha256:186de7ef977a20343ee9a5544073f081976a29e2d29ecf8379891e7bf177fbe9
+    command: [mini, -dir=/data]
+    environment:
+      AWS_ACCESS_KEY_ID: ${QUALYX_S3_ACCESS_KEY:?set QUALYX_S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${QUALYX_S3_SECRET_KEY:?set QUALYX_S3_SECRET_KEY}
+      S3_BUCKET: evidence
+    volumes: [objects:/data]
+    networks: [backend]
+    restart: unless-stopped
+
+networks:
+  backend:
+    internal: true
+  frontend: {}
+volumes:
+  postgres: {}
+  objects: {}

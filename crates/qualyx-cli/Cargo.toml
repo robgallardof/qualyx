@@ -10,6 +10,7 @@ authors.workspace = true
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.7", features = ["derive"] }
+qualyx-api.workspace = true
 qualyx-app.workspace = true
 qualyx-core.workspace = true
 qualyx-desktop.workspace = true
@@ -28,6 +29,7 @@ workspace = true
 
 [dev-dependencies]
 tempfile = "3.27.0"
+ureq = "3.5.0"
 which = "8.0.6"
 
 [[bin]]

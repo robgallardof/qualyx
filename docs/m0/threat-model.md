@@ -15,6 +15,10 @@ the host machine, network targets, run evidence (which must stay trustworthy), L
 4. **Qualyx → external tools** (k6, Semgrep, MCP servers): semi-trusted, pinned versions.
 5. **Qualyx → network targets** (load/DAST, M5): must be explicitly authorized.
 6. **Qualyx → LLM providers** (M3): data leaves the machine.
+7. **HTTP API → PostgreSQL queue → workers → S3** (M7): the bearer credential grants
+   access to configured trusted projects. Queue claims/leases separate control from execution;
+   dedicated worker containers limit host exposure. They are not hostile multi-tenant sandboxes.
+   See [SECURITY.md](../../SECURITY.md) for backend-network, credential and filesystem limits.
 
 ## Threats and mitigations
 

@@ -9,9 +9,11 @@ authors.workspace = true
 
 [dependencies]
 chrono = "0.4.45"
+postgres = { version = "0.19.14", features = ["with-chrono-0_4"] }
 qualyx-core.workspace = true
 rusqlite = { version = "0.41", features = ["bundled"] }
 serde_json = "1.0.154"
+serde = { version = "1.0.229", features = ["derive"] }
 
 [lints]
 workspace = true

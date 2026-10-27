@@ -5,12 +5,13 @@
 Qualyx is a quality engineering platform written in Rust. It finds the tests a project already has,
 runs them with each language's own runner, and reports back with evidence: which commands ran,
 which versions were used, what passed, what failed and what was skipped. You can use it from a
-terminal now, and from any agent that speaks MCP once M2 lands. AI is optional, and the
+terminal and from agents that speak MCP. AI is optional, and the
 deterministic mode doesn't need a model at all.
 
-> **Status:** M0 and M1 are done. The CLI discovers Rust, .NET, Node and Python projects, runs
-> their tests and stores the evidence. See [docs/STATUS.md](docs/STATUS.md) for what's verified
-> and what isn't yet.
+> **Status:** M0–M6 are implemented within the documented scope. M7 is in progress:
+> authenticated HTTP API, separate durable workers, Compose, PostgreSQL and S3 evidence.
+> See [docs/STATUS.md](docs/STATUS.md) for evidence and [M7 usage](docs/m7/team.md)
+> for setup and deployment limits.
 
 ## Try it
 

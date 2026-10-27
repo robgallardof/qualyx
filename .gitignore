@@ -9,6 +9,8 @@ artifacts/
 .idea/
 .vscode/
 .DS_Store
+sdk/python/build/
+sdk/python/*.egg-info/
 
 # Fixture build outputs
 fixtures/**/target/

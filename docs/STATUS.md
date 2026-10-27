@@ -1,6 +1,6 @@
 # Status
 
-Last updated: 2026-10-26.
+Last updated: 2026-10-27.
 
 | Milestone | State | Evidence |
 |---|---|---|
@@ -11,6 +11,94 @@ Last updated: 2026-10-26.
 | M4 — browser + Computer Use | **done** (scope below) | below, [matrix](m4/browsers.md) |
 | M5 — performance + security | **done** | below, [evidence](m5/assurance.md) |
 | M6 — quality and integration depth | **done** (scope below) | [evidence](m6/quality.md) |
+| M7 — team mode + release | **implemented within the scope below; remote release gates pending** | [team guide](m7/team.md), [ADR 0006](adr/0006-team-dispatch.md), acceptance below |
+
+## M7 durable execution, deployment and packaging — 2026-10-27
+
+Implemented:
+
+- `serve --team` dispatches durable PostgreSQL jobs without preparing/executing projects in
+  the API. Separate serial `worker` processes claim atomically, heartbeat 15-second leases,
+  poll cancellation and cannot overwrite a lost lease. Queue capacity: 64. Lost jobs fail
+  rather than silently rerunning external side effects. Local API mode remains available.
+- PostgreSQL schema v2 upgrades v1 transactionally while preserving run history; unknown
+  versions are refused. API views and worker execution enforce configured canonical roots.
+- Optional signed S3 archive via Apache object_store 0.14.2; project-scoped keys, manifest,
+  report and native artifacts. Missing local evidence falls back to S3; native hashes are
+  checked. Configured archive failures fail the job. Explicit offline recovery remains separate.
+- Shipped Compose API/worker/PostgreSQL/SeaweedFS, persistent database/object volumes,
+  loopback-only API exposure, private backend, non-root restricted worker, read-only API
+  project mount and separated credentials. The supplied image supports Python/pytest;
+  other native toolchains require a custom image. This is for trusted project copies.
+- Python HTTP v1 SDK 0.1.0, bilingual guide, contribution/security policies, updated threat
+  model, native package/checksum/install smoke and three-OS release workflow. Main pushes
+  validate packages; version tags create drafts only. OTel/dashboard expansion is optional.
+
+Executed on Windows 11 and Linux containers through Docker Desktop:
+
+| Check | Result |
+|---|---|
+| `cargo fmt --all --check` | passed |
+| `cargo clippy --workspace --all-targets -- -D warnings` | passed |
+| `cargo test --workspace --locked` | 178 passed, 0 failed, 1 ignored (explicit PostgreSQL test) |
+| `cargo test -p qualyx-cli --test team -- --include-ignored --nocapture` | 5 passed, including real PostgreSQL, v1-to-v2 upgrade, newer-schema refusal |
+| `python scripts/test_team.py` | passed: real PostgreSQL/S3/API/worker processes; SDK, restart, two-worker single claim, pass/fail, queued/running cancel, lease expiry, capacity, credential filtering and tamper/S3 recovery |
+| `docker build -t qualyx:team .` + `python scripts/test_team_compose.py` | passed: non-root worker, credential separation, service recreation, persistent database/object volumes and S3 fallback |
+| Native release build + `scripts/package.py` | passed on Windows: extracted installation, doctor, seeded pass/fail and SHA-256 archive |
+| Python SDK wheel build | passed |
+| `rhysd/actionlint` (image digest `b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667`) | passed for CI/release workflow definitions |
+| Trivy 0.69.3 source/dependency and secret scan (current downloaded DB) | 0 HIGH/CRITICAL dependency findings, 0 secret findings; fixtures, target and Git history excluded |
+
+Evidence logs and local packages are generated under ignored `target/` and `artifacts/`.
+Acceptance removes its temporary containers/projects. The scanner result is scoped, not a
+claim that lower-severity findings or image/OS vulnerabilities do not exist.
+
+At this local checkpoint, GitHub CI and three-OS release execution after pushing are
+**NOT EXECUTED**; their workflow definitions are not results. Live provider/agent smoke,
+optional browser/desktop/load/DAST/mutation/contract suites were not re-executed locally.
+Existing opt-in tests can return early in the default harness, so its count is not tool evidence.
+No tag, package registry upload or public release has been created.
+
+Limits: no hostile multi-tenant sandbox/RBAC, remote PostgreSQL TLS, HA, signed releases,
+formal SBOM or OTel. The provided trusted-project worker can access its project mounts and
+backend network; environment filtering is not isolation from a malicious same-user test.
+See SECURITY.md before remote deployment. Remote release results must be recorded separately.
+
+## M7 continuation — 2026-10-27
+
+Resumed the uncommitted M7 implementation after M6 (`4e6cff4`), using the planning pack
+`qa-command-center-planning.zip` and the matching `docs/PLANNING.md`.
+
+- HTTP `/v1` run API and read-only dashboard, canonical project-root allowlist, cancellation,
+  artifact retrieval and shared CLI/MCP job services. Credentials are required on every bind:
+  32+ printable ASCII characters, constant-time comparison. Origin-bearing API requests and
+  JSON bodies over 16 KiB are refused.
+- Fixed the race between checking capacity and registering jobs. Concurrent requests cannot
+  exceed the four-run API limit. Completed polling history is bounded; persisted runs remain
+  available. Run IDs now include a sequence so simultaneous requests cannot share a directory.
+- Shared PostgreSQL index selected with `QUALYX_DATABASE_URL`; default remains SQLite.
+  Project-scoped queries, transactional migrations, advisory migrator lock and refusal of
+  unsupported schema versions. Filesystem evidence remains authoritative.
+- Recovery is an explicit **offline** `qualyx recover` operation. Server startup leaves
+  incomplete evidence alone because another process may still be running. Added regression
+  coverage for that distinction. Recovery does not resume work.
+- EXECUTED on Windows: `cargo fmt --all --check`,
+  `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --locked`.
+  The workspace harness reports 176 passed, 0 failed, 1 ignored (PostgreSQL).
+- EXECUTED separately: `cargo test -p qualyx-cli --test team -- --include-ignored --nocapture`:
+  5 passed, including real HTTP child processes, simultaneous requests/cancellation, Python
+  fixtures and a real Docker PostgreSQL 17 container. Project separation, repeated schema
+  initialization and newer-schema refusal passed. The temporary container was removed.
+- The PostgreSQL test is explicitly ignored by default instead of returning success without
+  execution. Added its explicit invocation to Linux CI; that new CI run is **NOT EXECUTED**.
+- NOT EXECUTED in this continuation: live LLM/client smoke, real browser/desktop runs, optional
+  scanner/load/mutation/contract/Compose suites, Linux/macOS runs, installation/release smoke
+  and security review. Existing opt-in tests in those suites may return early in the default
+  workspace harness; its pass count is not evidence that those tools ran.
+- **Remaining M7:** separate isolated workers, Compose deployment, object storage, observability,
+  package/release automation, installation smoke and the complete migration/recovery/security
+  gate. This increment is a trusted-project API with a shared credential, not multi-user
+  authorization. PostgreSQL TLS and artifact replication are not implemented.
 
 ## M1 gate
 

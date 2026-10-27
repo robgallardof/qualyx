@@ -234,6 +234,33 @@ enum Command {
         #[arg(long = "root")]
         roots: Vec<PathBuf>,
     },
+    /// HTTP API + dashboard for team mode. Needs QUALYX_API_TOKEN (32+ characters).
+    Serve {
+        #[arg(long, default_value = "127.0.0.1:7878")]
+        bind: std::net::SocketAddr,
+        /// Directories the API may act on.
+        #[arg(long = "root", required = true)]
+        roots: Vec<PathBuf>,
+        /// Enqueue in PostgreSQL; never execute tests in the API process.
+        #[arg(long)]
+        team: bool,
+    },
+    /// Consume durable team jobs. Container isolation is the default.
+    Worker {
+        #[arg(long = "root", required = true)]
+        roots: Vec<PathBuf>,
+        /// Permit native subprocesses (only for trusted projects or an isolated worker container).
+        #[arg(long)]
+        allow_process: bool,
+        /// Process at most one job and exit; useful for disposable workers.
+        #[arg(long)]
+        once: bool,
+    },
+    /// Record runs interrupted by a crash (run dirs without a manifest) as errors.
+    Recover {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+    },
     /// Print the MCP configuration snippet for a client.
     McpConfig {
         #[arg(value_enum)]
@@ -996,6 +1023,39 @@ fn dispatch(cli: Cli) -> Result<u8> {
                 roots
             };
             qualyx_mcp::serve_stdio(roots)?;
+            Ok(0)
+        }
+        Command::Serve { bind, roots, team } => {
+            let token = std::env::var("QUALYX_API_TOKEN").ok();
+            qualyx_api::serve(qualyx_api::ApiConfig {
+                bind,
+                roots,
+                token,
+                team,
+            })?;
+            Ok(0)
+        }
+        Command::Worker {
+            roots,
+            allow_process,
+            once,
+        } => {
+            qualyx_app::team::worker(qualyx_app::team::WorkerConfig {
+                roots,
+                allow_process,
+                once,
+            })?;
+            Ok(0)
+        }
+        Command::Recover { path } => {
+            let root = qualyx_app::discover(&path)?.root;
+            let ids = qualyx_app::jobs::recover_interrupted(&root)?;
+            for id in &ids {
+                println!("recorded interrupted run {id} as error");
+            }
+            if ids.is_empty() {
+                println!("nothing to recover");
+            }
             Ok(0)
         }
         Command::McpConfig { client, roots } => {

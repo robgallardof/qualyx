@@ -1,0 +1,10 @@
+**
+!Cargo.toml
+!Cargo.lock
+!LICENSE-MIT
+!LICENSE-APACHE
+!crates/
+!crates/**
+crates/**/target
+crates/**/.qualyx
+crates/**/node_modules

@@ -5,8 +5,9 @@ Canonical instructions for any coding agent (Claude Code, Codex, OpenCode, Antig
 
 ## What this is
 Qualyx is a Rust-first, local-first QA execution and orchestration platform (CLI + MCP, optional
-API/dashboard) with a deterministic no-LLM mode. Status: **M0 and M1 done; next is M2 (MCP +
-isolation)**. Read [`docs/STATUS.md`](docs/STATUS.md) first.
+API/dashboard) with a deterministic no-LLM mode. Status: **M0–M6 implemented within the
+documented scope; M7 team execution implemented, release gates tracked in STATUS**.
+Read [`docs/STATUS.md`](docs/STATUS.md) first.
 
 - Full brief: [`docs/MASTER_PROMPT.md`](docs/MASTER_PROMPT.md)
 - Architecture, milestones, gates: [`docs/PLANNING.md`](docs/PLANNING.md)

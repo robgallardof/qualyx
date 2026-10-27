@@ -8,15 +8,14 @@
 
 pub mod clients;
 
-use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use qualyx_app::TestRequest;
+use qualyx_app::jobs::{Jobs, Roots};
 use qualyx_core::{Isolation, RunManifest, Status};
-use qualyx_runners::CancelToken;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, ServerCapabilities, ServerConfig};
@@ -38,22 +37,10 @@ const INSTRUCTIONS: &str = "Qualyx runs a project's existing tests with their na
 qa_get_artifact for details. Status 'inconclusive' or 'error' is never a pass. Only paths under \
 the configured roots are allowed.";
 
-enum RunState {
-    Running,
-    Finished(Box<RunManifest>),
-    Failed(String),
-}
-
-struct RunEntry {
-    project: PathBuf,
-    cancel: CancelToken,
-    state: RunState,
-}
-
 #[derive(Clone)]
 pub struct QualyxServer {
-    roots: Arc<Vec<PathBuf>>,
-    runs: Arc<Mutex<HashMap<String, RunEntry>>>,
+    roots: Roots,
+    jobs: Jobs,
     audit: Arc<Mutex<Option<std::fs::File>>>,
     tool_router: ToolRouter<Self>,
 }
@@ -232,17 +219,10 @@ pub fn summarize(m: &RunManifest) -> Value {
     })
 }
 
-fn canonical(p: &Path) -> std::io::Result<PathBuf> {
-    p.canonicalize()
-}
-
 impl QualyxServer {
     pub fn new(roots: Vec<PathBuf>) -> std::io::Result<Self> {
-        let roots: Vec<PathBuf> = roots
-            .iter()
-            .map(|r| canonical(r))
-            .collect::<Result<_, _>>()?;
-        let audit = roots.first().and_then(|r| {
+        let roots = Roots::new(&roots)?;
+        let audit = roots.list().first().and_then(|r| {
             let dir = r.join(qualyx_store::DIR);
             qualyx_store::Layout { dir: dir.clone() }.ensure().ok()?;
             OpenOptions::new()
@@ -252,8 +232,8 @@ impl QualyxServer {
                 .ok()
         });
         Ok(QualyxServer {
-            roots: Arc::new(roots),
-            runs: Arc::new(Mutex::new(HashMap::new())),
+            roots,
+            jobs: Jobs::new(MAX_CONCURRENT_RUNS),
             audit: Arc::new(Mutex::new(audit)),
             tool_router: Self::tool_router()
                 + Self::intel_router()
@@ -280,31 +260,12 @@ impl QualyxServer {
 
     /// Resolve a client path and enforce the root allowlist.
     fn allowed(&self, tool: &str, args: &impl Serialize, path: &str) -> Result<PathBuf, String> {
-        let resolved =
-            canonical(Path::new(path)).map_err(|e| format!("cannot access `{path}`: {e}"));
-        let decision = resolved.and_then(|p| {
-            if self.roots.iter().any(|r| p.starts_with(r)) {
-                Ok(p)
-            } else {
-                Err(format!("`{path}` is outside the allowed roots"))
-            }
-        });
+        let decision = self.roots.check(path);
         match &decision {
             Ok(_) => self.audit(tool, args, "allowed", ""),
             Err(e) => self.audit(tool, args, "denied", e),
         }
         decision
-    }
-
-    fn running_count(&self) -> usize {
-        self.runs
-            .lock()
-            .map(|r| {
-                r.values()
-                    .filter(|e| matches!(e.state, RunState::Running))
-                    .count()
-            })
-            .unwrap_or(0)
     }
 }
 
@@ -326,7 +287,7 @@ impl QualyxServer {
             "isolation": ["process", "container"],
             "container_engine": qualyx_runners::container::engine().map(|p| p.display().to_string()),
             "max_concurrent_runs": MAX_CONCURRENT_RUNS,
-            "roots": self.roots.iter().map(|r| r.display().to_string()).collect::<Vec<_>>(),
+            "roots": self.roots.list().iter().map(|r| r.display().to_string()).collect::<Vec<_>>(),
         }))
     }
 
@@ -392,12 +353,6 @@ impl QualyxServer {
                 ));
             }
         };
-        if self.running_count() >= MAX_CONCURRENT_RUNS {
-            return tool_error(format!(
-                "{MAX_CONCURRENT_RUNS} runs already in progress; wait or qa_cancel one"
-            ));
-        }
-        let cancel = CancelToken::default();
         let req = TestRequest {
             timeout_secs: args.timeout_secs,
             isolation: Some(isolation),
@@ -405,39 +360,12 @@ impl QualyxServer {
             jobs: args.jobs.unwrap_or(1).clamp(1, 8),
             compose: None,
         };
-        let prepared = match qualyx_app::prepare(&path, &req, cancel.clone()) {
-            Ok(p) => p,
-            Err(e) => return tool_error(format!("{e:#}")),
-        };
-        let run_id = prepared.run_id.clone();
-        let ecosystems: Vec<&str> = prepared
-            .profile()
-            .ecosystems
-            .iter()
-            .map(|d| d.ecosystem.as_str())
-            .collect();
-        let response = json!({"run_id": run_id, "state": "running", "ecosystems": ecosystems});
-        self.runs.lock().expect("runs lock").insert(
-            run_id.clone(),
-            RunEntry {
-                project: path,
-                cancel,
-                state: RunState::Running,
-            },
-        );
-        let runs = self.runs.clone();
-        std::thread::spawn(move || {
-            let state = match prepared.execute(|_| {}) {
-                Ok(m) => RunState::Finished(Box::new(m)),
-                Err(e) => RunState::Failed(format!("{e:#}")),
-            };
-            if let Ok(mut r) = runs.lock()
-                && let Some(entry) = r.get_mut(&run_id)
-            {
-                entry.state = state;
+        match self.jobs.start(&path, &req) {
+            Ok((run_id, ecosystems)) => {
+                ok_json(json!({"run_id": run_id, "state": "running", "ecosystems": ecosystems}))
             }
-        });
-        ok_json(response)
+            Err(e) => tool_error(format!("{e:#}")),
+        }
     }
 
     #[tool(
@@ -448,28 +376,25 @@ impl QualyxServer {
         &self,
         Parameters(args): Parameters<RunIdArgs>,
     ) -> Result<CallToolResult, McpError> {
-        let runs = self.runs.lock().expect("runs lock");
-        let Some(entry) = runs.get(&args.run_id) else {
+        let Some(job) = self.jobs.get(&args.run_id) else {
             return tool_error(format!(
                 "unknown run `{}` (only runs started by this server are tracked; use qa_report for older ones)",
                 args.run_id
             ));
         };
-        match &entry.state {
-            RunState::Running => ok_json(json!({
-                "run_id": args.run_id,
-                "state": "running",
-                "cancel_requested": entry.cancel.is_cancelled(),
-            })),
-            RunState::Finished(m) => {
+        match (job.state.as_str(), &job.manifest) {
+            ("finished", Some(m)) => {
                 let mut v = summarize(m);
                 v["state"] = json!("finished");
-                v["project"] = json!(entry.project);
+                v["project"] = json!(job.project);
                 ok_json(v)
             }
-            RunState::Failed(e) => {
-                ok_json(json!({"run_id": args.run_id, "state": "failed", "error": e}))
+            ("failed", _) => {
+                ok_json(json!({"run_id": args.run_id, "state": "failed", "error": job.error}))
             }
+            _ => ok_json(
+                json!({"run_id": args.run_id, "state": "running", "cancel_requested": job.cancel_requested}),
+            ),
         }
     }
 
@@ -485,13 +410,11 @@ impl QualyxServer {
         &self,
         Parameters(args): Parameters<RunIdArgs>,
     ) -> Result<CallToolResult, McpError> {
-        let runs = self.runs.lock().expect("runs lock");
-        let Some(entry) = runs.get(&args.run_id) else {
+        let Some(was_running) = self.jobs.cancel(&args.run_id) else {
             return tool_error(format!("unknown run `{}`", args.run_id));
         };
         self.audit("qa_cancel", &args, "allowed", "");
-        entry.cancel.cancel();
-        let state = if matches!(entry.state, RunState::Running) {
+        let state = if was_running {
             "cancelling"
         } else {
             "already-finished"

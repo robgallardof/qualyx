@@ -3,10 +3,13 @@
 //! Front ends parse input and format output; everything else (config, running, persisting,
 //! reading evidence back) lives here so the behaviour is identical whichever door is used.
 
+pub mod archive;
 pub mod assurance;
 pub mod browser;
+pub mod jobs;
 pub mod quality;
 pub mod render;
+pub mod team;
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,7 +18,7 @@ use std::time::Duration;
 use anyhow::{Context, Result, bail};
 use qualyx_core::{Ecosystem, Isolation, ProjectProfile, RunManifest};
 use qualyx_runners::{CancelToken, RunOptions, process};
-use qualyx_store::{Layout, RunSummary, Store};
+use qualyx_store::{Layout, RunIndex, RunSummary};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Default)]
@@ -88,7 +91,7 @@ pub fn init(path: &Path) -> Result<PathBuf> {
 }
 
 /// Overrides for one `test` request; `None` falls back to the project config.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TestRequest {
     pub timeout_secs: Option<u64>,
     pub isolation: Option<Isolation>,
@@ -283,7 +286,8 @@ impl PreparedRun {
 pub fn persist(layout: &Layout, run_dir: &Path, manifest: &RunManifest) -> Result<()> {
     let manifest_path = qualyx_store::write_manifest(run_dir, manifest)?;
     fs::write(run_dir.join("report.md"), render::markdown(manifest))?;
-    Store::open(&layout.db())?.insert_run(manifest, &manifest_path)?;
+    qualyx_store::open_index(layout, &manifest.project_root)?
+        .insert_run(manifest, &manifest_path)?;
     Ok(())
 }
 
@@ -297,22 +301,22 @@ pub fn test(
     Ok((prepared.execute(on_runner)?, dir))
 }
 
-fn open_store(root: &Path) -> Result<(Layout, Store)> {
+fn open_store(root: &Path) -> Result<(Layout, Box<dyn RunIndex>)> {
     let layout = Layout::new(root);
-    if !layout.db().exists() {
+    if !qualyx_store::index_exists(&layout) {
         bail!(
             "no runs recorded in {} (run `qualyx test` first)",
             root.display()
         );
     }
-    let store = Store::open(&layout.db())?;
+    let store = qualyx_store::open_index(&layout, root)?;
     Ok((layout, store))
 }
 
 /// Load a stored run (the latest when `run_id` is `None`).
 pub fn load_run(path: &Path, run_id: Option<&str>) -> Result<(RunManifest, PathBuf)> {
     let root = discover(path)?.root;
-    let (_, store) = open_store(&root)?;
+    let (_, mut store) = open_store(&root)?;
     let id = match run_id {
         Some(id) if qualyx_store::is_valid_run_id(id) => id.to_string(),
         Some(id) => bail!("invalid run id `{id}`"),
@@ -321,7 +325,18 @@ pub fn load_run(path: &Path, run_id: Option<&str>) -> Result<(RunManifest, PathB
     let manifest_path = store
         .manifest_path(&id)?
         .with_context(|| format!("unknown run `{id}`"))?;
-    let manifest = qualyx_store::read_manifest(&manifest_path)?;
+    let manifest = match qualyx_store::read_manifest(&manifest_path) {
+        Ok(m) => m,
+        Err(qualyx_store::StoreError::Io(e))
+            if e.kind() == std::io::ErrorKind::NotFound && archive::configured() =>
+        {
+            serde_json::from_slice(&archive::read(&root, &id, "manifest.json")?)?
+        }
+        Err(e) => return Err(e.into()),
+    };
+    if manifest.project_root != root || manifest.run_id != id {
+        bail!("manifest identity mismatch");
+    }
     let run_dir = manifest_path
         .parent()
         .map(Path::to_path_buf)
@@ -331,12 +346,13 @@ pub fn load_run(path: &Path, run_id: Option<&str>) -> Result<(RunManifest, PathB
 
 pub fn list_runs(path: &Path, limit: u32) -> Result<Vec<RunSummary>> {
     let root = discover(path)?.root;
-    let (_, store) = open_store(&root)?;
+    let (_, mut store) = open_store(&root)?;
     Ok(store.list_runs(limit)?)
 }
 
 /// Read one artifact of a run, refusing names that escape the run directory.
 pub fn read_artifact(path: &Path, run_id: &str, name: &str, max_bytes: usize) -> Result<String> {
+    archive::validate_name(name)?;
     let (manifest, run_dir) = load_run(path, Some(run_id))?;
     let known = name == "manifest.json"
         || name == "report.md"
@@ -347,7 +363,32 @@ pub fn read_artifact(path: &Path, run_id: &str, name: &str, max_bytes: usize) ->
     if !known {
         bail!("`{name}` is not an artifact of run {run_id}");
     }
-    let bytes = fs::read(run_dir.join(name))?;
+    let artifact = run_dir.join(name);
+    let bytes = match fs::read(&artifact) {
+        Ok(bytes) => {
+            if !artifact
+                .canonicalize()?
+                .starts_with(run_dir.canonicalize()?)
+            {
+                bail!("artifact escapes run directory");
+            }
+            bytes
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound && archive::configured() => {
+            archive::read(&manifest.project_root, run_id, name)?
+        }
+        Err(e) => return Err(e.into()),
+    };
+    if let Some(expected) = manifest.artifact_sha256.get(name) {
+        use sha2::{Digest, Sha256};
+        let digest: String = Sha256::digest(&bytes)
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect();
+        if digest != *expected {
+            bail!("artifact hash mismatch");
+        }
+    }
     let start = bytes.len().saturating_sub(max_bytes);
     let mut text = String::from_utf8_lossy(&bytes[start..]).into_owned();
     if start > 0 {
