@@ -8,10 +8,13 @@ evaluate JS, screenshot (`qualyx browsers --smoke`), plus the login flows in
 
 | Browser | Family | Protocol | Version | OS | Status | Evidence |
 |---|---|---|---|---|---|---|
-| Chrome | Chromium | CDP | 156.0.8078.47 | Windows 11 | **verified** | smoke + both login flows; console `login attempt demo ok`; `HTTP 404 /missing-endpoint.json` captured |
-| Edge | Chromium | CDP | 156.0.4314.42 | Windows 11 | **verified** | same as Chrome |
-| Chrome / Edge / Firefox | — | — | runner image | Windows, Linux, macOS (CI) | see CI | `real_browsers` test, `QUALYX_TEST_BROWSERS=1` on every OS |
-| Safari | WebKit | WebDriver (safaridriver) | runner image | macOS (CI) | see CI | needs `safaridriver --enable` once |
+| Chrome | Chromium | CDP | 156.0.8078.47 | Windows 11 (local) | **verified** | smoke + both login flows; console `login attempt demo ok`; `HTTP 404 /missing-endpoint.json` captured |
+| Edge | Chromium | CDP | 156.0.4314.42 | Windows 11 (local) | **verified** | same as Chrome |
+| Chrome | Chromium | CDP | 155.0.8059.39 · 156.0.8078.48 · 156.0.8078.48 | Ubuntu · Windows · macOS (CI) | **verified** | `real_browsers`, [run 40451352487](https://github.com/robgallardof/qualyx/actions/runs/40451352487) |
+| Chromium | Chromium | CDP | 155.0.8059.0 | Ubuntu (CI) | **verified** | same run |
+| Edge | Chromium | CDP | 155.0.4283.45 · 155.0.4283.62 · 155.0.4283.62 | Ubuntu · Windows · macOS (CI) | **verified** | same run |
+| Firefox | Firefox | WebDriver BiDi | 157.0 · 158.0.1 · 158.0.1 | Ubuntu · Windows · macOS (CI) | **verified** | same run: smoke + both login flows, console via `log.entryAdded` |
+| Safari | WebKit | WebDriver (safaridriver) | 26.6.2 | macOS (CI) | **verified** | same run, after `sudo safaridriver --enable`; no console/network evidence by design |
 | Chromium, Brave, Opera, Vivaldi | Chromium | CDP | — | — | **unknown** | detected by path, never run on a test machine |
 | Zen | Firefox | WebDriver BiDi | — | — | **unknown** | detected by path, never run on a test machine |
 
@@ -28,8 +31,9 @@ Notes:
 
 `playwright.config.*` → `npx playwright test --reporter=line,junit`. Verified on Windows 11 with
 `@playwright/test` 1.64.1 (Chromium): the passing fixture gives 2 passed + 1 skipped, and the
-failing one fails on exactly the seeded test with `Expected: "Welcome, demo"`. CI repeats this
-on Linux.
+failing one fails on exactly the seeded test with `Expected: "Welcome, demo"`. Also verified on
+Ubuntu in CI (run 40451352487). The Playwright tests are opt-in (`QUALYX_TEST_PLAYWRIGHT=1`), so
+the Windows and macOS CI jobs don't run them.
 
 ## Desktop (Computer Use, read-only)
 
