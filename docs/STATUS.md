@@ -2,6 +2,34 @@
 
 Last updated: 2026-10-27.
 
+## Web console (Next.js) — 2026-10-27
+
+The single-file `dashboard.html` is replaced by a read-only console in `web/dashboard`:
+Next.js 16 static export, shadcn/ui (Radix), Tailwind 4, light/dark/system theme,
+English/Spanish (browser language by default), React Hook Form + Zod validation, history
+search/filters, outcome counts, the run report in a dialog and an MCP setup guide. The export is
+committed in `crates/qualyx-api/dashboard`; `build.rs` embeds it, so `cargo build` and the Docker
+image need no Node. The API serves it with `nosniff`, `no-referrer` and a same-origin CSP
+(`frame-ancestors 'none'`); `/_next/static` is cached as immutable.
+
+- EXECUTED: `npm run typecheck`, 5 Node unit tests for response parsing (native and team
+  payloads, invalid payloads rejected), filtering, summaries and shell quoting; two clean
+  `npm run build` runs produced byte-identical exports; fmt, strict workspace clippy and the
+  locked workspace suite (185 passed, 0 failed); the rewritten real-Chromium regression
+  `dashboard_recovers_from_auth_empty_history_and_network_failure` (weak token refused
+  client-side, 401, empty history, one passed run, API loss with rows cleared and retry enabled).
+  Visual review in Chromium: desktop light/dark, Spanish report dialog, 390 px mobile.
+- CI: new `dashboard` job (typecheck, unit tests, build, drift check of the committed export).
+- NOT EXECUTED: Firefox/Safari rendering of the console; there is no `npm run dev` proxy, because
+  cross-origin requests are refused by design. Rebuild and use `qualyx serve` to try changes.
+
+## Browser CI flakiness — 2026-10-27
+
+Windows run 40557076110 failed when Firefox discarded its startup window during
+`browsingContext.create`; launch now retries only that "no such frame" error (93ca4b5). The
+Safari driver start/session creation now retries with a fresh `safaridriver` (96df60d). Run
+40560345896 passed on all three operating systems.
+
 ## macOS browser CI repair — 2026-10-27
 
 Run 40551659939 passed Windows, Linux, lint, team deployment and assurance, but macOS

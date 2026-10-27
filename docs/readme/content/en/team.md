@@ -6,6 +6,17 @@ Local CLI/MCP uses SQLite by default. Team mode adds an authenticated HTTP API, 
 | Local API | Up to four concurrent runs | Token and allowed project roots |
 | Durable team API | Shared queue, independent workers | PostgreSQL; optional S3 |
 
+### Review results in the console
+
+`qualyx serve` also serves a read-only web console at `/`: run history, pass/fail counts, search and filters, and each run's report. It is built with Next.js and shadcn/ui, has light and dark themes and is available in English and Spanish. It is bundled inside the `qualyx` binary, so no Node.js server is needed. It never starts or cancels runs: your terminal or MCP agent does that.
+
+```sh
+export QUALYX_API_TOKEN="$(openssl rand -hex 24)"   # 32+ printable characters
+qualyx serve --root /path/to/projects               # http://127.0.0.1:7878
+```
+
+Open `http://127.0.0.1:7878`, enter a project path under `--root` and the token. The token stays in that tab's memory only.
+
 The [bilingual team guide](docs/m7/team.md) includes the complete Compose setup, credentials, Python SDK, cancellation, backups and recovery. Start there before deploying `deploy/team/compose.yaml`.
 
 Each worker processes one job at a time. The queue holds at most 64 queued/running jobs. Expired worker leases fail jobs rather than automatically repeating external side effects. A finished job is not necessarily a passing test: inspect `manifest.status`.

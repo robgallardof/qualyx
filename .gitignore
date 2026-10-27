@@ -19,3 +19,10 @@ fixtures/**/obj/
 fixtures/**/node_modules/
 __pycache__/
 .pytest_cache/
+web/dashboard/node_modules/
+web/dashboard/.next/
+web/dashboard/out/
+web/dashboard/*.tsbuildinfo
+web/dashboard/next-env.d.ts
+web/dashboard/playwright-report/
+web/dashboard/test-results/

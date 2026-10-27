@@ -1,0 +1,4 @@
+:HL["/_next/static/css/4bbab217f7c07e62.css","style"]
+2:[["children",{"s":"__PAGE__","h":160}]]
+1:[["children",{"s":"_not-found","h":96,"c":"$Q2"}]]
+0:{"b":"qualyx-console-v1","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

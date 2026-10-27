@@ -126,47 +126,72 @@ fn dashboard_recovers_from_auth_empty_history_and_network_failure() {
         .expect("installed Chromium-family browser");
     let mut driver = qualyx_browser::launch(&browser, true).unwrap();
     driver.navigate(&server.1).unwrap();
-    driver
-        .eval(&format!(
-            "document.getElementById('project').value = {}",
-            serde_json::to_string(&project).unwrap()
-        ))
-        .unwrap();
 
-    fn load(driver: &mut dyn qualyx_browser::Driver) -> String {
-        driver
-            .eval("document.getElementById('f').requestSubmit(); true")
-            .unwrap();
+    fn eval(driver: &mut dyn qualyx_browser::Driver, js: &str) -> Value {
+        driver.eval(js).unwrap()
+    }
+    fn wait(driver: &mut dyn qualyx_browser::Driver, js: &str, what: &str) {
         let start = Instant::now();
-        loop {
-            if driver
-                .eval("!document.getElementById('load').disabled")
-                .unwrap()
-                == true
-            {
-                return driver
-                    .eval("document.getElementById('msg').textContent")
-                    .unwrap()
-                    .as_str()
-                    .unwrap()
-                    .to_string();
-            }
-            assert!(
-                start.elapsed() < Duration::from_secs(20),
-                "dashboard stuck loading"
-            );
+        while eval(driver, js) != true {
+            assert!(start.elapsed() < Duration::from_secs(20), "{what}");
             std::thread::sleep(Duration::from_millis(50));
         }
     }
+    // React owns the inputs: use the native setter and an input event, like typing.
+    fn fill(driver: &mut dyn qualyx_browser::Driver, id: &str, value: &str) {
+        eval(
+            driver,
+            &format!(
+                "(() => {{ const el = document.getElementById({id:?});                  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, {});                  el.dispatchEvent(new Event('input', {{ bubbles: true }})); return true; }})()",
+                serde_json::to_string(value).unwrap()
+            ),
+        );
+    }
+    /// Submit (or refresh) and return the error key once loading has finished.
+    fn load(driver: &mut dyn qualyx_browser::Driver, action: &str) -> String {
+        eval(driver, action);
+        let shell = "document.querySelector('.console-shell')";
+        wait(
+            driver,
+            &format!("{shell}.dataset.loading === 'false'"),
+            "dashboard stuck loading",
+        );
+        eval(driver, "document.getElementById('msg').dataset.error")
+            .as_str()
+            .unwrap()
+            .to_string()
+    }
+    let rows = "document.querySelectorAll('#rows tr').length";
+    let submit = "document.getElementById('f').requestSubmit(); true";
+    let refresh = "document.querySelector('[data-testid=refresh]').click(); true";
 
-    assert_eq!(load(driver.as_mut()), "missing or invalid bearer token");
-    driver
-        .eval(&format!(
-            "document.getElementById('token').value = {}",
-            serde_json::to_string(TOKEN).unwrap()
-        ))
-        .unwrap();
-    assert_eq!(load(driver.as_mut()), "No runs found for this project.");
+    wait(
+        driver.as_mut(),
+        "document.querySelector('.console-shell')?.dataset.ready === 'true'",
+        "dashboard never hydrated",
+    );
+    fill(driver.as_mut(), "project", &project.display().to_string());
+    // Client-side validation refuses a short token before any request is made.
+    fill(driver.as_mut(), "token", "short");
+    eval(driver.as_mut(), submit);
+    wait(
+        driver.as_mut(),
+        "!!document.getElementById('token-error')",
+        "weak token accepted",
+    );
+
+    fill(driver.as_mut(), "token", &"x".repeat(40));
+    assert_eq!(load(driver.as_mut(), submit), "authError");
+
+    fill(driver.as_mut(), "token", TOKEN);
+    assert_eq!(load(driver.as_mut(), submit), "");
+    assert_eq!(
+        eval(
+            driver.as_mut(),
+            "document.querySelector('.empty-state')?.dataset.kind"
+        ),
+        "no-runs"
+    );
     assert!(
         Command::new(BIN)
             .arg("test")
@@ -176,26 +201,25 @@ fn dashboard_recovers_from_auth_empty_history_and_network_failure() {
             .status
             .success()
     );
-    assert!(load(driver.as_mut()).contains("1 run(s) shown"));
+    assert_eq!(load(driver.as_mut(), refresh), "");
+    assert_eq!(eval(driver.as_mut(), rows), 1);
     assert_eq!(
-        driver
-            .eval("document.querySelectorAll('#rows tr').length")
-            .unwrap(),
-        1
+        eval(
+            driver.as_mut(),
+            "document.querySelector('#rows .result-badge').className"
+        ),
+        "result-badge result-passed"
     );
+
     server.0.kill().unwrap();
     server.0.wait().unwrap();
-    assert!(load(driver.as_mut()).contains("Could not load runs"));
+    assert_eq!(load(driver.as_mut(), refresh), "networkError");
+    assert_eq!(eval(driver.as_mut(), rows), 0);
     assert_eq!(
-        driver
-            .eval("document.querySelectorAll('#rows tr').length")
-            .unwrap(),
-        0
-    );
-    assert_eq!(
-        driver
-            .eval("document.getElementById('load').disabled")
-            .unwrap(),
+        eval(
+            driver.as_mut(),
+            "document.querySelector('[data-testid=refresh]').disabled"
+        ),
         false
     );
 }

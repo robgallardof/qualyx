@@ -1,5 +1,5 @@
 //! HTTP API for team mode (M7): the same services as the CLI and MCP server, behind a bearer
-//! token, with a minimal read-only dashboard.
+//! token, with a read-only dashboard (the Next.js export in `dashboard/`).
 //!
 //! - A token (`QUALYX_API_TOKEN`) is mandatory, including on loopback.
 //! - Every project path must sit under a configured root.
@@ -9,9 +9,9 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use axum::extract::{DefaultBodyLimit, Path as AxPath, Query, Request, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode, Uri, header};
 use axum::middleware::{self, Next};
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use qualyx_app::TestRequest;
@@ -284,10 +284,51 @@ async fn health() -> Json<Value> {
     Json(json!({"status": "ok", "version": env!("CARGO_PKG_VERSION")}))
 }
 
-const DASHBOARD: &str = include_str!("dashboard.html");
+include!(concat!(env!("OUT_DIR"), "/dashboard_assets.rs"));
 
-async fn dashboard() -> Html<&'static str> {
-    Html(DASHBOARD)
+/// Read-only console: same-origin script and API only, never framed.
+const DASHBOARD_CSP: &str = "default-src 'self'; script-src 'self' 'unsafe-inline';     style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';     frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
+fn content_type(path: &str) -> &'static str {
+    match path.rsplit_once('.').map_or("", |(_, ext)| ext) {
+        "html" => "text/html; charset=utf-8",
+        "js" => "text/javascript; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "json" => "application/json",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "ico" => "image/x-icon",
+        "woff2" => "font/woff2",
+        "txt" => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Serve the embedded Next.js export: `/` and `/dir/` map to their `index.html`.
+async fn dashboard(uri: Uri) -> Response {
+    let mut path = uri.path().trim_start_matches('/').to_string();
+    if path.is_empty() || path.ends_with('/') {
+        path.push_str("index.html");
+    }
+    let Some((name, body)) = ASSETS.iter().find(|(name, _)| *name == path) else {
+        return error(StatusCode::NOT_FOUND, "not found");
+    };
+    let cache = if name.starts_with("_next/static/") {
+        "public, max-age=31536000, immutable"
+    } else {
+        "no-cache"
+    };
+    (
+        [
+            (header::CONTENT_TYPE, content_type(name)),
+            (header::CACHE_CONTROL, cache),
+            (header::CONTENT_SECURITY_POLICY, DASHBOARD_CSP),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+            (header::REFERRER_POLICY, "no-referrer"),
+        ],
+        *body,
+    )
+        .into_response()
 }
 
 fn router(roots: Roots, token: Option<String>, queue_url: Option<String>) -> Router {
@@ -305,8 +346,8 @@ fn router(roots: Roots, token: Option<String>, queue_url: Option<String>) -> Rou
         .route_layer(middleware::from_fn_with_state(st.clone(), auth));
     Router::new()
         .route("/health", get(health))
-        .route("/", get(dashboard))
         .merge(api)
+        .fallback(get(dashboard))
         .layer(DefaultBodyLimit::max(16_384))
         .with_state(st)
 }

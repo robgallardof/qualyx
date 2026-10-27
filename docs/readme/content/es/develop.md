@@ -11,6 +11,13 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace --locked
 ```
 
+La consola vive en `web/dashboard` (export estático de Next.js). Su build se versiona en `crates/qualyx-api/dashboard`, así que `cargo build` nunca necesita Node; CI la reconstruye y falla si no coincide. Después de cambiarla:
+
+```sh
+cd web/dashboard && npm ci && npm run typecheck && npm test && npm run build
+cargo test -p qualyx-cli --test team dashboard_recovers -- --ignored   # Chromium real
+```
+
 Este README usa [Readme Builder](https://github.com/robgallardof/readme-builder). Edita `readme.json` y `docs/readme/content/` y sigue las [instrucciones de regeneración](docs/readme/README.md).
 
 Doble licencia: [MIT](LICENSE-MIT) o [Apache-2.0](LICENSE-APACHE), a tu elección. [Avisos de los recursos del README](docs/readme/THIRD-PARTY-NOTICES.md).

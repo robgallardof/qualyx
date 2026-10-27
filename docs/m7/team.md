@@ -61,7 +61,9 @@ MCP still use SQLite unless `QUALYX_DATABASE_URL` selects the shared PostgreSQL 
 
 ## HTTP v1 and SDK
 
-`/health` and the read-only dashboard `/` are public. `/v1` requires a bearer credential on
+`/health` and the read-only console at `/` (static Next.js export embedded in the binary,
+served with a same-origin Content-Security-Policy) are public; it only reads `/v1` with the
+token the user types, kept in that tab's memory. `/v1` requires a bearer credential on
 every bind, including loopback. Origin-bearing API requests are refused and JSON bodies are
 limited to 16 KiB. Use a trusted TLS proxy before remote exposure; there is no OAuth/CORS/RBAC.
 
