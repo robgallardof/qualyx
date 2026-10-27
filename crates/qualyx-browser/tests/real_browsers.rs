@@ -116,6 +116,23 @@ fn login_flows_pass_and_fail_with_evidence() {
 }
 
 #[test]
+fn firefox_context_is_ready_across_repeated_sessions() {
+    if !enabled() {
+        return;
+    }
+    for browser in browsers()
+        .into_iter()
+        .filter(|b| b.family == qualyx_browser::Family::Firefox)
+    {
+        for _ in 0..3 {
+            let mut driver = qualyx_browser::launch(&browser, true).unwrap();
+            driver.navigate("about:blank").unwrap();
+            assert_eq!(driver.eval("document.readyState").unwrap(), "complete");
+        }
+    }
+}
+
+#[test]
 fn axe_finds_seeded_accessibility_bugs_and_not_on_the_clean_page() {
     if !enabled() {
         return;

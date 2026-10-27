@@ -109,10 +109,12 @@ impl Bidi {
             failures: Vec::new(),
         };
         b.call("session.new", json!({"capabilities": {}}))?;
-        let tree = b.call("browsingContext.getTree", json!({}))?;
-        b.context = tree["contexts"][0]["context"]
+        // session.new can finish before Firefox's startup window exists. Own an
+        // explicit context instead of racing the initial getTree snapshot.
+        let created = b.call("browsingContext.create", json!({"type": "window"}))?;
+        b.context = created["context"]
             .as_str()
-            .ok_or_else(|| err("no browsing context"))?
+            .ok_or_else(|| err("browsingContext.create returned no context"))?
             .to_string();
         b.call("session.subscribe", json!({"events": ["log.entryAdded"]}))?;
         // Network events are newer in Firefox; absence only means no network evidence.

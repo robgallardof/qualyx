@@ -24,6 +24,12 @@ The same CI run also exposed non-canonical recovery identity on macOS/Windows ru
 and Linux host cleanup of UID-10001-created bind-mount evidence. Recovery now canonicalizes
 its project root; Compose acceptance moves/relaxes only disposable worker-owned evidence
 as that worker user. It keeps the non-root deployment and all original assertions.
+On `00f098b`, M7/Compose, Linux/macOS tests and all three release packages passed. Windows
+then exposed a pre-existing Firefox BiDi startup race (`getTree` returned no initial context).
+The driver now creates its own top-level context using the W3C command rather than assuming
+the startup window is ready. Real-browser coverage repeats Firefox launch/navigation three
+times and retains all seeded accessibility/login assertions. Local Firefox is unavailable;
+that integration is validated by the Windows/Linux CI hosts, not a protocol mock.
 
 Implemented:
 
