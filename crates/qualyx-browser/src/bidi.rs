@@ -111,7 +111,18 @@ impl Bidi {
         b.call("session.new", json!({"capabilities": {}}))?;
         // session.new can finish before Firefox's startup window exists. Own an
         // explicit context instead of racing the initial getTree snapshot.
-        let created = b.call("browsingContext.create", json!({"type": "window"}))?;
+        // While that startup window is still being swapped out, create can fail
+        // with "no such frame" (DiscardedBrowsingContextError); it settles quickly.
+        let mut attempt = 0;
+        let created = loop {
+            match b.call("browsingContext.create", json!({"type": "window"})) {
+                Err(e) if attempt < 20 && e.to_string().contains("no such frame") => {
+                    attempt += 1;
+                    std::thread::sleep(Duration::from_millis(250));
+                }
+                r => break r?,
+            }
+        };
         b.context = created["context"]
             .as_str()
             .ok_or_else(|| err("browsingContext.create returned no context"))?
