@@ -5,7 +5,7 @@ Last updated: 2026-10-26.
 | Milestone | State | Evidence |
 |---|---|---|
 | M0 — research & threat model | **done** | [integration matrix](m0/integration-matrix.md), [threat model](m0/threat-model.md), ADRs [0001](adr/0001-rust-workspace.md)–[0005](adr/0005-adapter-sdk.md) |
-| M1 — deterministic vertical slice | **done on Windows; Linux/macOS gate runs in CI** | below |
+| M1 — deterministic vertical slice | **done** (Windows, Linux, macOS) | below |
 | M2 — MCP + isolation | not started | — |
 
 ## M1 gate
@@ -39,8 +39,10 @@ toolchains:
 | empty dir | inconclusive, exit 2 (never green) | ✔ |
 | `--run ../../etc` | rejected as invalid run id | ✔ |
 
-Linux and macOS: the same suite runs in [CI](../.github/workflows/ci.yml). The gate counts as met
-on those OSes only once that workflow is green.
+Linux and macOS: the same suite passed in [CI](../.github/workflows/ci.yml) on commit `8142b11`
+([run 40445737901](https://github.com/robgallardof/qualyx/actions/runs/40445737901)): lint,
+`ubuntu-latest`, `windows-latest` and `macos-latest` all green, with .NET 10, Node 24,
+Python 3.13 and pytest 8.3.5.
 
 ## Known limitations (M1)
 
