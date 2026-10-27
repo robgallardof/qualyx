@@ -11,9 +11,16 @@ Last updated: 2026-10-27.
 | M4 — browser + Computer Use | **done** (scope below) | below, [matrix](m4/browsers.md) |
 | M5 — performance + security | **done** | below, [evidence](m5/assurance.md) |
 | M6 — quality and integration depth | **done** (scope below) | [evidence](m6/quality.md) |
-| M7 — team mode + release | **implemented within the scope below; remote release gates pending** | [team guide](m7/team.md), [ADR 0006](adr/0006-team-dispatch.md), acceptance below |
+| M7 — team mode + release | **done within the scope below** | [team guide](m7/team.md), [ADR 0006](adr/0006-team-dispatch.md), acceptance below |
 
 ## M7 durable execution, deployment and packaging — 2026-10-27
+
+README follow-up: regenerated English and Spanish entry points with Readme Builder
+`6172887`, committed authored JSON/Markdown and local light/dark SVGs with license notices.
+Builder drift check and local-link audit passed (0 findings). Browser proof-sheet review
+loaded all 34 assets and checked desktop and 375px layouts without horizontal overflow.
+This verifies local components, not GitHub's final Markdown renderer. Quickstart, evidence,
+MCP, team deployment boundaries and contributor instructions now precede the closing banner.
 
 CI follow-up: the first Linux acceptance run of `4374ea5` exposed a fixture mistake:
 pytest's `testpaths = ["tests"]` excluded newly written slow/credential tests at the root.
@@ -60,7 +67,7 @@ Executed on Windows 11 and Linux containers through Docker Desktop:
 |---|---|
 | `cargo fmt --all --check` | passed |
 | `cargo clippy --workspace --all-targets -- -D warnings` | passed |
-| `cargo test --workspace --locked` | 178 passed, 0 failed, 1 ignored (explicit PostgreSQL test) |
+| `cargo test --workspace --locked` | 179 passed, 0 failed, 1 ignored (explicit PostgreSQL test) |
 | `cargo test -p qualyx-cli --test team -- --include-ignored --nocapture` | 5 passed, including real PostgreSQL, v1-to-v2 upgrade, newer-schema refusal |
 | `python scripts/test_team.py` | passed: real PostgreSQL/S3/API/worker processes; SDK, restart, two-worker single claim, pass/fail, queued/running cancel, lease expiry, capacity, credential filtering and tamper/S3 recovery |
 | `docker build -t qualyx:team .` + `python scripts/test_team_compose.py` | passed: non-root worker, credential separation, service recreation, persistent database/object volumes and S3 fallback |
@@ -73,16 +80,21 @@ Evidence logs and local packages are generated under ignored `target/` and `arti
 Acceptance removes its temporary containers/projects. The scanner result is scoped, not a
 claim that lower-severity findings or image/OS vulnerabilities do not exist.
 
-At this local checkpoint, GitHub CI and three-OS release execution after pushing are
-**NOT EXECUTED**; their workflow definitions are not results. Live provider/agent smoke,
-optional browser/desktop/load/DAST/mutation/contract suites were not re-executed locally.
-Existing opt-in tests can return early in the default harness, so its count is not tool evidence.
+Remote gates on code commit `78d1d9f014cec8754e3cf318b1f1db10e152b0b9` **passed**:
+[CI run 40466395666](https://github.com/robgallardof/qualyx/actions/runs/40466395666)
+completed all six jobs: lint, Windows/Linux/macOS workspace and real-browser suites,
+assurance (real load/security/mutation/contract integrations), and team Compose deployment.
+[Package run 40466395847](https://github.com/robgallardof/qualyx/actions/runs/40466395847)
+built and smoke-tested all three native packages; draft publication was correctly skipped.
+Live provider/agent and desktop smoke were not re-executed in this continuation.
+Default opt-in tests can return early, so the workspace count alone is not external-tool evidence.
 No tag, package registry upload or public release has been created.
 
 Limits: no hostile multi-tenant sandbox/RBAC, remote PostgreSQL TLS, HA, signed releases,
 formal SBOM or OTel. The provided trusted-project worker can access its project mounts and
 backend network; environment filtering is not isolation from a malicious same-user test.
-See SECURITY.md before remote deployment. Remote release results must be recorded separately.
+See SECURITY.md before remote deployment. The remote results validate this scope, not the
+omitted capabilities.
 
 ## M7 continuation — 2026-10-27
 

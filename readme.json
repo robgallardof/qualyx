@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "name": "Qualyx",
+  "theme": "ocean",
+  "motion": "off",
+  "documents": [
+    {
+      "file": "README.md",
+      "language": "en",
+      "label": "English",
+      "eyebrow": "QUALITY ENGINEERING · LOCAL FIRST",
+      "tagline": "Run real tests. Keep the evidence.",
+      "sections": [
+        {"id":"start","title":"Run your first check","icon":"rocket","stage":"start","source":"docs/readme/content/en/start.md"},
+        {"id":"evidence","title":"Results you can inspect","icon":"file","stage":"use","source":"docs/readme/content/en/evidence.md"},
+        {"id":"agents","title":"Use it with your agent","icon":"bot","stage":"use","source":"docs/readme/content/en/agents.md"},
+        {"id":"team","title":"Share execution with your team","icon":"layers","stage":"advanced","source":"docs/readme/content/en/team.md"},
+        {"id":"develop","title":"Explore and contribute","icon":"code","stage":"contribute","source":"docs/readme/content/en/develop.md"}
+      ]
+    },
+    {
+      "file": "README.es.md",
+      "language": "es",
+      "label": "Español",
+      "eyebrow": "INGENIERÍA DE CALIDAD · PRIMERO EN LOCAL",
+      "tagline": "Ejecuta pruebas reales. Conserva la evidencia.",
+      "sections": [
+        {"id":"start","title":"Ejecuta tu primera prueba","icon":"rocket","stage":"start","source":"docs/readme/content/es/start.md"},
+        {"id":"evidence","title":"Resultados que puedes revisar","icon":"file","stage":"use","source":"docs/readme/content/es/evidence.md"},
+        {"id":"agents","title":"Úsalo con tu agente","icon":"bot","stage":"use","source":"docs/readme/content/es/agents.md"},
+        {"id":"team","title":"Comparte la ejecución con tu equipo","icon":"layers","stage":"advanced","source":"docs/readme/content/es/team.md"},
+        {"id":"develop","title":"Explora y contribuye","icon":"code","stage":"contribute","source":"docs/readme/content/es/develop.md"}
+      ]
+    }
+  ]
+}
