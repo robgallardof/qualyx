@@ -5,6 +5,7 @@
 //! Secrets are never stored in clear: Gitleaks runs with `--redact` and every message is
 //! passed through Qualyx's redactor as well.
 
+pub mod audit;
 pub mod dast;
 
 use std::fs;
@@ -183,12 +184,18 @@ pub struct ScannerResult {
     pub findings: usize,
     pub sarif: Option<String>,
     pub notes: Vec<String>,
+    /// Actual scanner process exit code; absent when it never started or was killed.
+    pub exit_code: Option<i32>,
+    /// Whether the scanner exceeded its allotted time.
+    pub timed_out: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SecurityReport {
-    /// "clean", "findings", "inconclusive" (nothing could run).
+    /// "clean", "findings", or "inconclusive" when any requested scan is incomplete.
     pub status: String,
+    /// True only when every requested scanner completed with usable evidence.
+    pub coverage_complete: bool,
     pub scanners: Vec<ScannerResult>,
     pub findings: Vec<Finding>,
     /// Findings a human marked as false positives, with the reason. Reported, never hidden.
@@ -220,6 +227,12 @@ pub fn scan(
     timeout: Duration,
 ) -> std::io::Result<SecurityReport> {
     fs::create_dir_all(out_dir)?;
+    // The caller may reuse an evidence directory after a failed attempt.
+    match fs::remove_file(out_dir.join("merged.sarif")) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e),
+    }
     let env = qualyx_runners::process::child_env(&[]);
     let semgrep_cfg = semgrep_config(root);
     let mut results = Vec::new();
@@ -234,12 +247,20 @@ pub fn scan(
                 findings: 0,
                 sarif: None,
                 notes: vec![format!("`{}` is not on PATH", s.id())],
+                exit_code: None,
+                timed_out: false,
             });
             continue;
         };
         let version = qualyx_runners::process::version(&prog, s.version_args(), root);
         let sarif_name = format!("{}.sarif", s.id());
         let sarif_path = out_dir.join(&sarif_name);
+        // A failed rerun must never borrow a previous run's clean evidence.
+        match fs::remove_file(&sarif_path) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e),
+        }
         let mut cmd = qualyx_runners::process::command(
             &prog,
             &s.args(root, &sarif_path, &semgrep_cfg),
@@ -258,28 +279,41 @@ pub fn scan(
                 "no project .semgrep.yml: used the p/default registry ruleset (network)".into(),
             );
         }
-        let doc: Option<Value> = fs::read(&sarif_path)
-            .ok()
-            .and_then(|b| serde_json::from_slice(&b).ok());
+        let doc = audit::read_sarif(&sarif_path);
+        let completed = !outcome.timed_out
+            && !outcome.cancelled
+            && (outcome.exit_code == Some(0)
+                || (s == Scanner::OsvScanner && outcome.exit_code == Some(1)));
         match doc {
-            Some(d) => {
+            Ok(d) => {
                 let f = parse_sarif(&d);
-                // Store the SARIF with messages redacted as well.
-                let _ = qualyx_runners::redact::redact_file(&sarif_path);
+                // Redact decoded strings, so escaped secrets cannot bypass masking.
+                fs::write(&sarif_path, serde_json::to_vec_pretty(&d)?)?;
+                let complete = completed && audit::invocations_succeeded(&d);
+                if !complete {
+                    notes
+                        .push("scanner execution incomplete; findings are partial evidence".into());
+                }
                 results.push(ScannerResult {
                     scanner: s,
-                    status: "ran".into(),
+                    status: if complete { "ran" } else { "error" }.into(),
                     version,
                     findings: f.len(),
                     sarif: Some(sarif_name),
                     notes,
+                    exit_code: outcome.exit_code,
+                    timed_out: outcome.timed_out,
                 });
                 findings.extend(f);
                 docs.push(d);
             }
-            None => {
+            Err(reason) => {
+                // Even unusable scanner output may contain credentials.
+                if sarif_path.exists() {
+                    qualyx_runners::redact::redact_file(&sarif_path)?;
+                }
                 notes.push(format!(
-                    "no SARIF produced (exit {:?}, timed out: {}); see {}.log",
+                    "unusable SARIF: {reason} (exit {:?}, timed out: {}); see {}.log",
                     outcome.exit_code,
                     outcome.timed_out,
                     s.id()
@@ -291,6 +325,8 @@ pub fn scan(
                     findings: 0,
                     sarif: None,
                     notes,
+                    exit_code: outcome.exit_code,
+                    timed_out: outcome.timed_out,
                 });
             }
         }
@@ -306,24 +342,16 @@ pub fn scan(
         let _ = qualyx_runners::redact::redact_file(&out_dir.join("merged.sarif"));
         Some("merged.sarif".into())
     };
-    let status = if results.iter().all(|r| r.status != "ran") {
-        "inconclusive"
-    } else if findings.is_empty() {
-        "clean"
-    } else {
-        "findings"
-    };
-    let report = SecurityReport {
-        status: status.into(),
+    let mut report = SecurityReport {
+        status: "inconclusive".into(),
+        coverage_complete: false,
         scanners: results,
         findings,
         suppressed: Vec::new(),
         merged_sarif,
     };
-    fs::write(
-        out_dir.join("security-report.json"),
-        serde_json::to_vec_pretty(&report)?,
-    )?;
+    report.refresh_status();
+    report.write_evidence(out_dir)?;
     Ok(report)
 }
 

@@ -2,6 +2,41 @@
 
 Last updated: 2026-10-27.
 
+## Security audit follow-up — 2026-10-27
+
+The original M5 covered scanner execution/SARIF, not a complete audit workflow. Added
+[audit guidance](m5/security-audit.md) and the repository-local
+[`qualyx-security-audit` skill](../.agents/skills/qualyx-security-audit/SKILL.md), inspired by
+candidate triage and evidence validation. No global agent settings or plugins were installed.
+This is an incremental security improvement, not closure of the remaining original roadmap.
+
+- `security-report.json` now exposes `coverage_complete`, scanner exit codes and timeouts.
+  Any requested missing/failed scanner makes the verdict inconclusive (CLI exit 2), while
+  keeping usable partial findings. Reviewed suppressions cannot erase coverage gaps.
+- Scanner output must contain usable SARIF 2.1.0 results. Unexpected process exits, failed
+  invocations and timeouts cannot produce a clean verdict. Reruns discard old SARIF evidence.
+- `security-audit.md` records execution receipts, candidate findings and suppression reasons.
+  Candidates require code-path/boundary review and reproduction or an explicit proof gap;
+  scanner output never automatically confirms an exploit. Decoded evidence strings are redacted.
+- EXECUTED: real Gitleaks 8.30.1, Semgrep 1.182.1, Trivy 0.76.1 and OSV-Scanner 2.7.0:
+  four integration tests passed, including seeded findings/redaction, clean controls, invalid
+  Semgrep rules with stale evidence, and a real scanner timeout.
+- EXECUTED: real CLI regression with Gitleaks/Semgrep; suppression of the seeded candidate
+  retained exit 2 for failed Semgrep. The missing-scanner CLI regression also passed.
+- EXECUTED: skill frontmatter/scaffold validation, pinned Readme Builder drift/link checks
+  (0 findings), and actionlint. CI explicitly runs the new real-scanner CLI regression.
+- EXECUTED: `cargo fmt --all --check`, strict workspace clippy and `cargo test --workspace
+  --locked`: 185 passed, 0 failed, 2 explicitly ignored (PostgreSQL and the separate real-scanner
+  CLI test). Default opt-in integration tests can return early; real scanner evidence above
+  comes from the separate enabled run, not the workspace count.
+- Live agent invocation of the new skill, an independent penetration test and new remote CI
+  on this security change are **NOT EXECUTED** at this local checkpoint.
+
+Compatibility: the security status strings are unchanged, but a partial scan that previously
+returned `clean` or `findings` now returns `inconclusive`; consumers must inspect retained
+findings as well as coverage. The new JSON fields are additive. Existing threat-model and
+single-tenant trusted-project deployment limits still apply.
+
 | Milestone | State | Evidence |
 |---|---|---|
 | M0 — research & threat model | **done** | [integration matrix](m0/integration-matrix.md), [threat model](m0/threat-model.md), ADRs [0001](adr/0001-rust-workspace.md)–[0005](adr/0005-adapter-sdk.md) |

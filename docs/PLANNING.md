@@ -83,6 +83,8 @@ Browser candidates: Chrome, Chromium, Edge, Firefox, Safari/macOS, Zen, Opera, B
 **Gate:** reproducible sample login/form flows; no unverified 'all browsers' claims.
 
 ### M5 — Performance + security
+- Security audit follow-up: explicit scanner coverage and execution receipts, candidate
+  validation workflow and repository skill. See [security audit](m5/security-audit.md).
 - k6 workloads (smoke/load/stress/spike/soak), Lighthouse, autocannon where useful.
 - p50/p95/p99, throughput, errors, saturation, GC, DB query timing, traces.
 - Semgrep, Trivy, Gitleaks, OSV and authorized ZAP; SARIF output.

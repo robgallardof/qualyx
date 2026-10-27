@@ -15,3 +15,5 @@ qualyx report path/to/project --format markdown
 | Python | `python -m pytest` | Individual tests from JUnit |
 
 Optional adapters cover [browsers and accessibility](docs/m4/browsers.md), [load and security](docs/m5/assurance.md), and [mutation, contracts and services](docs/m6/quality.md). They require their own tools and permissions; a default run does not execute every adapter.
+
+[Security audits](docs/m5/security-audit.md) include explicit scanner coverage, execution receipts and a reusable agent skill. Missing or failed scans are inconclusive; scanner findings remain candidates until reviewed.

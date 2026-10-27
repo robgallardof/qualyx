@@ -133,3 +133,5 @@ jobs:
           QUALYX_TEST_MUTANTS: "1"
           QUALYX_TEST_SCHEMATHESIS: "1"
           QUALYX_TEST_DOCKER: "1"
+      - name: Security audit CLI with real scanners and reviewed suppressions
+        run: cargo test --locked -p qualyx-cli --test security_audit -- --ignored --nocapture

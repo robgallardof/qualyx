@@ -156,13 +156,8 @@ pub fn security_scan(project: &Path, scanners: &[Scanner]) -> Result<(SecurityRe
             })
             .collect();
         r.findings = kept;
-        if r.status == "findings" && r.findings.is_empty() {
-            r.status = "clean".into();
-        }
-        fs::write(
-            out.join("security-report.json"),
-            serde_json::to_vec_pretty(&r)?,
-        )?;
+        r.refresh_status();
+        r.write_evidence(&out)?;
     }
     Ok((r, out))
 }

@@ -40,6 +40,9 @@ How a verdict is reached:
 
 ## Security
 
+For coverage semantics, evidence receipts and the reusable repository skill, see
+[Security audit workflow](security-audit.md). A clean subset must not hide a failed requested scanner.
+
 `crates/qualyx-security/tests/real_scanners.rs` builds a project at runtime (no secret is ever
 committed) with an AWS-key-shaped token, `subprocess.call(cmd, shell=True)` and
 `django==2.2.0`:

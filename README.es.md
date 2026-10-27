@@ -61,6 +61,8 @@ qualyx report ruta/al/proyecto --format markdown
 
 Los adaptadores opcionales cubren [navegadores y accesibilidad](docs/m4/browsers.md), [carga y seguridad](docs/m5/assurance.md), y [mutación, contratos y servicios](docs/m6/quality.md). Requieren sus herramientas y permisos; una ejecución normal no activa todos los adaptadores.
 
+Las [auditorías de seguridad](docs/m5/security-audit.md) incluyen cobertura explícita, resultados de cada escáner y una skill reutilizable. Un escaneo incompleto es inconcluso; los hallazgos necesitan revisión antes de confirmarse.
+
 <p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
 <a id="agents"></a>

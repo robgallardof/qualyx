@@ -73,6 +73,8 @@ fn seeded_vulnerabilities_are_detected_with_redacted_evidence() {
         assert_eq!(s.status, "ran", "{s:?}");
     }
     assert_eq!(r.status, "findings");
+    assert!(r.coverage_complete);
+    assert!(out.path().join("security-audit.md").is_file());
     let by = |tool: Scanner| {
         r.findings.iter().filter(move |f| {
             f.tool
@@ -142,4 +144,57 @@ fn clean_project_has_no_secret_or_sast_findings() {
         r.scanners
     );
     assert_eq!(r.status, "clean", "{:#?}", r.findings);
+    assert!(r.coverage_complete);
+}
+
+#[test]
+fn broken_rules_cannot_reuse_stale_evidence_or_hide_behind_a_clean_scanner() {
+    if !enabled() {
+        return;
+    }
+    let project = tempfile::tempdir().unwrap();
+    fs::write(project.path().join("app.py"), "print('hello')\n").unwrap();
+    fs::write(project.path().join(".semgrep.yml"), "rules: [invalid").unwrap();
+    let out = tempfile::tempdir().unwrap();
+    fs::write(
+        out.path().join("semgrep.sarif"),
+        r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"semgrep"}},"results":[]}]}"#,
+    )
+    .unwrap();
+    let report = scan(
+        project.path(),
+        &[Scanner::Gitleaks, Scanner::Semgrep],
+        out.path(),
+        Duration::from_secs(120),
+    )
+    .unwrap();
+    assert_eq!(report.scanners[0].status, "ran");
+    assert_eq!(report.scanners[1].status, "error");
+    assert!(!report.coverage_complete);
+    assert_eq!(report.status, "inconclusive");
+    let stored: serde_json::Value =
+        serde_json::from_slice(&fs::read(out.path().join("security-report.json")).unwrap())
+            .unwrap();
+    assert_eq!(stored["status"], "inconclusive");
+}
+
+#[test]
+fn timed_out_scanner_is_inconclusive() {
+    if !enabled() {
+        return;
+    }
+    let project = tempfile::tempdir().unwrap();
+    fs::write(project.path().join("app.py"), "print('hello')\n").unwrap();
+    fs::write(project.path().join(".semgrep.yml"), SEMGREP_RULES).unwrap();
+    let out = tempfile::tempdir().unwrap();
+    let report = scan(
+        project.path(),
+        &[Scanner::Semgrep],
+        out.path(),
+        Duration::ZERO,
+    )
+    .unwrap();
+    assert!(report.scanners[0].timed_out);
+    assert_eq!(report.status, "inconclusive");
+    assert!(!report.coverage_complete);
 }
