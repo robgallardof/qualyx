@@ -75,6 +75,10 @@ pub struct DetectedEcosystem {
     /// Human-readable caveats, e.g. why only the exit code is trusted.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub notes: Vec<String>,
+    /// Restrict the run to these packages (Rust workspaces, from impact analysis).
+    /// Empty means the whole ecosystem.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packages: Vec<String>,
 }
 
 /// Result of `qualyx discover`.
@@ -264,6 +268,9 @@ pub struct RunManifest {
     pub arch: String,
     #[serde(default)]
     pub isolation: Isolation,
+    /// Set when only part of the project ran (impact analysis), with the reason.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection: Option<String>,
     pub started_at: DateTime<Utc>,
     pub finished_at: DateTime<Utc>,
     pub status: Status,

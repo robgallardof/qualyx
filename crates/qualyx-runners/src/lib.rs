@@ -331,6 +331,7 @@ pub fn assemble(
         os: std::env::consts::OS.to_string(),
         arch: std::env::consts::ARCH.to_string(),
         isolation,
+        selection: None,
         started_at,
         finished_at: Utc::now(),
         status,

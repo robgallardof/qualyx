@@ -37,6 +37,13 @@
             "type": "string"
           }
         },
+        "packages": {
+          "description": "Restrict the run to these packages (Rust workspaces, from impact analysis).\nEmpty means the whole ecosystem.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "target": {
           "description": "Optional target passed to the tool (e.g. a `.sln` for `dotnet test`).",
           "type": [

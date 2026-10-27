@@ -14,6 +14,7 @@ clap = { version = "4.6.7", features = ["derive"] }
 qualyx-app.workspace = true
 qualyx-core.workspace = true
 qualyx-discovery.workspace = true
+qualyx-impact.workspace = true
 qualyx-runners.workspace = true
 qualyx-store.workspace = true
 rmcp = { version = "3.8", features = ["server", "transport-io", "macros"] }

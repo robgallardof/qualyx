@@ -306,6 +306,7 @@ mod tests {
             os: "linux".into(),
             arch: "x86_64".into(),
             isolation: Isolation::Process,
+            selection: None,
             started_at: at,
             finished_at: at,
             status,

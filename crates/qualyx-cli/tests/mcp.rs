@@ -136,6 +136,7 @@ fn lists_tools_with_schemas() {
     assert_eq!(
         names,
         [
+            "qa_analyze_failure",
             "qa_cancel",
             "qa_capabilities",
             "qa_discover",
@@ -145,6 +146,7 @@ fn lists_tools_with_schemas() {
             "qa_report",
             "qa_run",
             "qa_run_status",
+            "qa_test_impact",
             "qa_verify"
         ]
     );
@@ -221,6 +223,18 @@ fn run_status_report_artifact_verify_end_to_end() {
     );
     assert!(!err, "{log}");
     assert!(log.as_str().unwrap().contains("testcase"));
+
+    let (err, tri) = c.call(
+        "qa_analyze_failure",
+        json!({"path": path, "run_id": run_id}),
+    );
+    assert!(!err, "{tri}");
+    assert_eq!(tri["groups"][0]["tests"][0], "test_bad");
+    assert!(
+        tri["groups"][0]["reproduce"][0]["command"]
+            .to_string()
+            .contains("test_bad")
+    );
 
     let (err, v) = c.call("qa_verify", json!({"path": path, "run_id": run_id}));
     assert!(!err);

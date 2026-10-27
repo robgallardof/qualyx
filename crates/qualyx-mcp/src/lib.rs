@@ -72,6 +72,26 @@ pub struct RunArgs {
     pub timeout_secs: Option<u64>,
     /// "process" (default) or "container".
     pub isolation: Option<String>,
+    /// Only run what changed since this git revision (e.g. "origin/main"), or "index".
+    pub changed_since: Option<String>,
+    /// Ecosystems in parallel (default 1).
+    pub jobs: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct ImpactArgs {
+    /// Project directory.
+    pub path: String,
+    /// Git revision to diff against (e.g. "origin/main", "HEAD~1"), or "index".
+    pub base: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct TriageArgs {
+    /// Project directory.
+    pub path: String,
+    /// Run id; the latest run when omitted.
+    pub run_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
@@ -179,7 +199,7 @@ impl QualyxServer {
             roots: Arc::new(roots),
             runs: Arc::new(Mutex::new(HashMap::new())),
             audit: Arc::new(Mutex::new(audit)),
-            tool_router: Self::tool_router(),
+            tool_router: Self::tool_router() + Self::intel_router(),
         })
     }
 
@@ -321,6 +341,8 @@ impl QualyxServer {
         let req = TestRequest {
             timeout_secs: args.timeout_secs,
             isolation: Some(isolation),
+            changed_since: args.changed_since.clone(),
+            jobs: args.jobs.unwrap_or(1).clamp(1, 8),
         };
         let prepared = match qualyx_app::prepare(&path, &req, cancel.clone()) {
             Ok(p) => p,
@@ -506,6 +528,53 @@ impl QualyxServer {
                     json!({"run_id": m.run_id, "checked": m.artifact_sha256.len(), "intact": modified.is_empty(), "modified_or_missing": modified}),
                 )
             }
+            Err(e) => tool_error(format!("{e:#}")),
+        }
+    }
+}
+
+#[tool_router(router = intel_router)]
+impl QualyxServer {
+    #[tool(
+        description = "Which tests a change affects: changed files since a git revision (or the content index) mapped to ecosystems and, for Rust workspaces, packages plus their dependents. Falls back to the whole ecosystem when unsure.",
+        annotations(read_only_hint = true)
+    )]
+    async fn qa_test_impact(
+        &self,
+        Parameters(args): Parameters<ImpactArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let path = match self.allowed("qa_test_impact", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        let base = args.base.clone();
+        let r =
+            tokio::task::spawn_blocking(move || -> anyhow::Result<qualyx_impact::ImpactPlan> {
+                let profile = qualyx_app::discover(&path)?;
+                qualyx_app::impact(&profile, &base)
+            })
+            .await;
+        match r {
+            Ok(Ok(plan)) => ok_json(serde_json::to_value(plan).unwrap_or_default()),
+            Ok(Err(e)) => tool_error(format!("{e:#}")),
+            Err(e) => tool_error(e.to_string()),
+        }
+    }
+
+    #[tool(
+        description = "Deterministic triage of a run's failures: groups by signature, category, source locations and the exact command to re-run each failing test alone.",
+        annotations(read_only_hint = true)
+    )]
+    async fn qa_analyze_failure(
+        &self,
+        Parameters(args): Parameters<TriageArgs>,
+    ) -> Result<CallToolResult, McpError> {
+        let path = match self.allowed("qa_analyze_failure", &args, &args.path) {
+            Ok(p) => p,
+            Err(e) => return tool_error(e),
+        };
+        match qualyx_app::triage(&path, args.run_id.as_deref(), false) {
+            Ok(t) => ok_json(serde_json::to_value(t).unwrap_or_default()),
             Err(e) => tool_error(format!("{e:#}")),
         }
     }

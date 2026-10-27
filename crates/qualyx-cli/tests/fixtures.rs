@@ -133,8 +133,13 @@ fn rust_failing() {
     );
 }
 
+/// Serializes the two .NET fixtures: concurrent first-run restores on a fresh macOS runner
+/// failed once in CI (run 40448534920).
+static DOTNET: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 #[test]
 fn dotnet_passing() {
+    let _serial = DOTNET.lock().unwrap_or_else(|e| e.into_inner());
     assert_passing(
         Ecosystem::Dotnet,
         "passing",
@@ -148,6 +153,7 @@ fn dotnet_passing() {
 
 #[test]
 fn dotnet_failing() {
+    let _serial = DOTNET.lock().unwrap_or_else(|e| e.into_inner());
     assert_failing(
         Ecosystem::Dotnet,
         "Failing.CalculatorTests.AddsTwoNumbers",

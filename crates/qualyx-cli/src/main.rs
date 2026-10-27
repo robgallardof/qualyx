@@ -49,9 +49,52 @@ enum Command {
         /// Where tools run (overrides `.qualyx/config.toml`).
         #[arg(long, value_enum)]
         isolation: Option<IsolationArg>,
+        /// Only run what changed since this git revision, or `index` (last `qualyx index`).
+        #[arg(long)]
+        changed_since: Option<String>,
+        /// Run up to N ecosystems in parallel.
+        #[arg(long, default_value_t = 1)]
+        jobs: usize,
         /// Print the manifest as JSON instead of the summary.
         #[arg(long)]
         json: bool,
+    },
+    /// Show which tests a change affects without running them.
+    Impact {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        /// Git revision to diff against, or `index`.
+        #[arg(long)]
+        base: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Record content hashes of the project (baseline for `--changed-since index`).
+    Index {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+    },
+    /// Group a run's failures, locate them and print how to reproduce each one.
+    Triage {
+        #[arg(default_value = ".")]
+        path: PathBuf,
+        #[arg(long)]
+        run: Option<String>,
+        /// Also ask the configured `[llm]` for a root-cause hypothesis (labelled as such).
+        #[arg(long)]
+        llm: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Single-writer git worktrees for agents.
+    Worktree {
+        #[command(subcommand)]
+        action: WorktreeAction,
+    },
+    /// Check what the configured `[llm]` endpoint supports.
+    LlmProbe {
+        #[arg(default_value = ".")]
+        path: PathBuf,
     },
     /// Show a stored run (the latest by default) or list runs.
     Report {
@@ -91,6 +134,29 @@ enum Command {
     Schema {
         #[arg(long, default_value = "schemas")]
         out: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+enum WorktreeAction {
+    /// Create `.qualyx/worktrees/<name>` on branch `qualyx/<name>`.
+    Create {
+        name: String,
+        #[arg(long, default_value = "HEAD")]
+        base: String,
+        #[arg(long, default_value = ".")]
+        repo: PathBuf,
+    },
+    /// List worktrees.
+    List {
+        #[arg(long, default_value = ".")]
+        repo: PathBuf,
+    },
+    /// Remove a worktree and its branch (refused while a writer holds it).
+    Remove {
+        name: String,
+        #[arg(long, default_value = ".")]
+        repo: PathBuf,
     },
 }
 
@@ -171,11 +237,15 @@ fn dispatch(cli: Cli) -> Result<u8> {
             path,
             timeout,
             isolation,
+            changed_since,
+            jobs,
             json,
         } => {
             let req = TestRequest {
                 timeout_secs: timeout,
                 isolation: isolation.map(Into::into),
+                changed_since,
+                jobs,
             };
             let (manifest, run_dir) = qualyx_app::test(&path, &req, |d| {
                 if !json {
@@ -217,6 +287,102 @@ fn dispatch(cli: Cli) -> Result<u8> {
                 Format::Json => println!("{}", serde_json::to_string_pretty(&manifest)?),
             }
             Ok(0)
+        }
+        Command::Impact { path, base, json } => {
+            let profile = qualyx_app::discover(&path)?;
+            let plan = qualyx_app::impact(&profile, &base)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&plan)?);
+                return Ok(0);
+            }
+            println!(
+                "{} changed file(s) since {} ({} ignored as non-code)",
+                plan.changed_files.len(),
+                plan.source,
+                plan.ignored_files.len()
+            );
+            for e in &plan.ecosystems {
+                let scope = match &e.scope {
+                    qualyx_impact::Scope::Skip => "skip".to_string(),
+                    qualyx_impact::Scope::All => "all".to_string(),
+                    qualyx_impact::Scope::Packages(p) => p.join(", "),
+                };
+                println!("{:<7} {:<9} {scope}", e.ecosystem.as_str(), e.confidence);
+                for r in &e.reasons {
+                    println!("        {r}");
+                }
+            }
+            Ok(0)
+        }
+        Command::Index { path } => {
+            println!("indexed {} file(s)", qualyx_app::index(&path)?);
+            Ok(0)
+        }
+        Command::Triage {
+            path,
+            run,
+            llm,
+            json,
+        } => {
+            let report = qualyx_app::triage(&path, run.as_deref(), llm)?;
+            if json {
+                println!("{}", serde_json::to_string_pretty(&report)?);
+                return Ok(0);
+            }
+            if report.triage.groups.is_empty() {
+                println!(
+                    "No failures in run {} ({}).",
+                    report.triage.run_id,
+                    report.triage.status.as_str()
+                );
+            }
+            for (i, g) in report.triage.groups.iter().enumerate() {
+                println!(
+                    "{}. [{}] {:?} — {}",
+                    i + 1,
+                    g.ecosystem.as_str(),
+                    g.category,
+                    g.signature
+                );
+                for t in &g.tests {
+                    println!("     test: {t}");
+                }
+                for l in &g.locations {
+                    println!("     at:   {l}");
+                }
+                for r in &g.reproduce {
+                    println!("     run:  {}", r.command.join(" "));
+                }
+            }
+            if let Some(h) = &report.llm_hypothesis {
+                println!("\nModel hypothesis (unverified):\n{h}");
+            }
+            Ok(0)
+        }
+        Command::Worktree { action } => {
+            match action {
+                WorktreeAction::Create { name, base, repo } => {
+                    let p = qualyx_scheduler::worktree::create(&repo, &name, &base)
+                        .map_err(anyhow::Error::msg)?;
+                    println!("{}", p.display());
+                }
+                WorktreeAction::List { repo } => {
+                    for w in qualyx_scheduler::worktree::list(&repo) {
+                        println!("{w}");
+                    }
+                }
+                WorktreeAction::Remove { name, repo } => {
+                    qualyx_scheduler::worktree::remove(&repo, &name).map_err(anyhow::Error::msg)?;
+                    println!("removed {name}");
+                }
+            }
+            Ok(0)
+        }
+        Command::LlmProbe { path } => {
+            let (cfg, caps) = qualyx_app::llm_probe(&path)?;
+            println!("{} {} ({:?})", cfg.base_url, cfg.model, cfg.kind);
+            println!("{}", serde_json::to_string_pretty(&caps)?);
+            Ok(if caps.completion { 0 } else { 1 })
         }
         Command::Verify { path, run } => {
             let (manifest, run_dir) = qualyx_app::load_run(&path, run.as_deref())?;

@@ -63,12 +63,16 @@ fn collect_junit(out_dir: &Path, file: &str) -> Collected {
 pub struct CargoTest;
 
 impl Runner for CargoTest {
-    fn plan(&self, _: &DetectedEcosystem, _: OutPath<'_>) -> Invocation {
+    fn plan(&self, detected: &DetectedEcosystem, _: OutPath<'_>) -> Invocation {
+        let mut args: Vec<String> = ["test", "--no-fail-fast", "--color", "never"]
+            .map(String::from)
+            .to_vec();
+        for p in &detected.packages {
+            args.extend(["-p".to_string(), p.clone()]);
+        }
         Invocation {
             program: &["cargo"],
-            args: ["test", "--no-fail-fast", "--color", "never"]
-                .map(String::from)
-                .to_vec(),
+            args,
             version_args: &["--version"],
             detail: Detail::PerTest,
         }
@@ -261,6 +265,7 @@ mod tests {
             manifest: "x".into(),
             target: target.map(String::from),
             notes: vec![],
+            packages: vec![],
         }
     }
 

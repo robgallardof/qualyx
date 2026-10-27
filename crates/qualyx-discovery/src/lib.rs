@@ -43,6 +43,7 @@ fn detected(ecosystem: Ecosystem, tool: TestTool, manifest: &str) -> DetectedEco
         manifest: manifest.to_string(),
         target: None,
         notes: Vec::new(),
+        packages: Vec::new(),
     }
 }
 

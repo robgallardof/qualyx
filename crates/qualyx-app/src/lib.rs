@@ -19,6 +19,8 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct Config {
     pub run: RunConfig,
+    /// Optional model provider for LLM-assisted roles (triage hypotheses). Off when absent.
+    pub llm: Option<qualyx_llm::ProviderConfig>,
 }
 
 #[derive(Deserialize)]
@@ -49,6 +51,13 @@ timeout_secs = 1800
 isolation = \"process\"
 # Environment variables are filtered for test processes. List extra names to pass through.
 env_passthrough = []
+
+# Optional LLM for model-assisted roles. Qualyx works fully without it.
+# [llm]
+# kind = \"openai-compatible\"          # or \"anthropic\"
+# base_url = \"https://api.deepseek.com\" # Ollama: http://localhost:11434/v1
+# model = \"<model name>\"
+# api_key_env = \"DEEPSEEK_API_KEY\"       # omit for local servers
 ";
 
 pub fn load_config(layout: &Layout) -> Result<Config> {
@@ -80,6 +89,11 @@ pub fn init(path: &Path) -> Result<PathBuf> {
 pub struct TestRequest {
     pub timeout_secs: Option<u64>,
     pub isolation: Option<Isolation>,
+    /// Run only what changed since this git revision, or since the last `qualyx index` when
+    /// the value is `"index"`.
+    pub changed_since: Option<String>,
+    /// Ecosystems run in parallel up to this many at once (0 or 1: sequential).
+    pub jobs: usize,
 }
 
 /// A run that has an id and a directory but hasn't started yet, so callers (MCP) can hand the
@@ -90,10 +104,18 @@ pub struct PreparedRun {
     profile: ProjectProfile,
     layout: Layout,
     opts: RunOptions,
+    jobs: usize,
+    selection: Option<String>,
 }
 
 pub fn prepare(path: &Path, req: &TestRequest, cancel: CancelToken) -> Result<PreparedRun> {
-    let profile = discover(path)?;
+    let mut profile = discover(path)?;
+    let mut selection = None;
+    if let Some(base) = &req.changed_since {
+        let plan = impact(&profile, base)?;
+        selection = Some(selection_summary(&plan));
+        profile = plan.apply(&profile);
+    }
     let layout = Layout::new(&profile.root);
     layout.ensure()?;
     let config = load_config(&layout)?;
@@ -109,7 +131,47 @@ pub fn prepare(path: &Path, req: &TestRequest, cancel: CancelToken) -> Result<Pr
             env_passthrough: config.run.env_passthrough,
             cancel,
         },
+        jobs: req.jobs,
+        selection,
     })
+}
+
+/// Changed files and the resulting selection for `profile`.
+pub fn impact(profile: &ProjectProfile, base: &str) -> Result<qualyx_impact::ImpactPlan> {
+    let (changed, source) = if base == "index" {
+        (
+            qualyx_impact::changed_since_index(&profile.root),
+            "content index".to_string(),
+        )
+    } else {
+        (
+            qualyx_impact::changed_since_git(&profile.root, base),
+            format!("git {base}"),
+        )
+    };
+    let changed = changed.map_err(|e| anyhow::anyhow!(e))?;
+    Ok(qualyx_impact::analyze(profile, changed, &source))
+}
+
+fn selection_summary(plan: &qualyx_impact::ImpactPlan) -> String {
+    let parts: Vec<String> = plan
+        .ecosystems
+        .iter()
+        .map(|e| {
+            let scope = match &e.scope {
+                qualyx_impact::Scope::Skip => "skipped".to_string(),
+                qualyx_impact::Scope::All => "all".to_string(),
+                qualyx_impact::Scope::Packages(p) => format!("packages {}", p.join(", ")),
+            };
+            format!("{} {scope} ({})", e.ecosystem.as_str(), e.confidence)
+        })
+        .collect();
+    format!(
+        "changed since {}: {} file(s); {}",
+        plan.source,
+        plan.changed_files.len(),
+        parts.join("; ")
+    )
 }
 
 impl PreparedRun {
@@ -122,15 +184,71 @@ impl PreparedRun {
         self,
         on_runner: impl FnMut(&qualyx_core::DetectedEcosystem),
     ) -> Result<RunManifest> {
-        let manifest = qualyx_runners::run(
+        let mut manifest = if self.jobs > 1 && self.profile.ecosystems.len() > 1 {
+            self.execute_parallel(on_runner)?
+        } else {
+            qualyx_runners::run(
+                &self.profile,
+                &self.run_id,
+                &self.run_dir,
+                &self.opts,
+                on_runner,
+            )?
+        };
+        manifest.selection = self.selection.clone();
+        persist(&self.layout, &self.run_dir, &manifest)?;
+        Ok(manifest)
+    }
+
+    /// One scheduler task per ecosystem; results keep discovery order.
+    fn execute_parallel(
+        &self,
+        mut on_runner: impl FnMut(&qualyx_core::DetectedEcosystem),
+    ) -> Result<RunManifest> {
+        use std::sync::{Arc, Mutex};
+        fs::create_dir_all(&self.run_dir)?;
+        let started_at = chrono::Utc::now();
+        let git = qualyx_runners::git_info(&self.profile.root);
+        let slots: Arc<Mutex<Vec<Option<qualyx_core::RunnerResult>>>> =
+            Arc::new(Mutex::new(vec![None; self.profile.ecosystems.len()]));
+        let mut dag = qualyx_scheduler::Dag::new();
+        for (i, d) in self.profile.ecosystems.iter().enumerate() {
+            on_runner(d);
+            let (d, root, run_id, run_dir, opts, slots) = (
+                d.clone(),
+                self.profile.root.clone(),
+                self.run_id.clone(),
+                self.run_dir.clone(),
+                self.opts.clone(),
+                slots.clone(),
+            );
+            dag.add(format!("{i:03}-{}", d.ecosystem.as_str()), &[], move |_| {
+                let r = qualyx_runners::execute(&d, &root, &run_id, &run_dir, &opts);
+                slots.lock().map_err(|e| e.to_string())?[i] = Some(r);
+                Ok(())
+            });
+        }
+        let limits = qualyx_scheduler::Limits {
+            max_concurrency: self.jobs,
+            budget: None,
+        };
+        dag.run(&limits, &self.opts.cancel)
+            .map_err(|e| anyhow::anyhow!(e))?;
+        let runners = slots
+            .lock()
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?
+            .drain(..)
+            .flatten()
+            .collect();
+        Ok(qualyx_runners::assemble(
             &self.profile,
             &self.run_id,
             &self.run_dir,
-            &self.opts,
-            on_runner,
-        )?;
-        persist(&self.layout, &self.run_dir, &manifest)?;
-        Ok(manifest)
+            self.opts.isolation,
+            started_at,
+            git,
+            runners,
+        ))
     }
 }
 
@@ -208,6 +326,63 @@ pub fn read_artifact(path: &Path, run_id: &str, name: &str, max_bytes: usize) ->
         text.insert_str(0, &format!("[… {start} earlier bytes omitted …]\n"));
     }
     Ok(text)
+}
+
+/// Snapshot the project's files as the baseline for `changed_since = "index"`.
+pub fn index(path: &Path) -> Result<usize> {
+    let root = discover(path)?.root;
+    Ok(qualyx_impact::write_index(&root)?)
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TriageReport {
+    #[serde(flatten)]
+    pub triage: qualyx_triage::Triage,
+    /// Model-generated explanation. A hypothesis to check, never evidence.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub llm_hypothesis: Option<String>,
+}
+
+const TRIAGE_SYSTEM_PROMPT: &str = "You are a senior test engineer. Using only the failure data \
+given, state the most likely root cause of each group and the single next check that would \
+confirm it. Be brief. Say 'unknown' when the data is insufficient. Never invent file contents.";
+
+/// Deterministic triage of a run, plus an optional model hypothesis when `[llm]` is configured.
+pub fn triage(path: &Path, run_id: Option<&str>, use_llm: bool) -> Result<TriageReport> {
+    let (manifest, _) = load_run(path, run_id)?;
+    let triage = qualyx_triage::triage(&manifest);
+    let llm_hypothesis = if use_llm && !triage.groups.is_empty() {
+        let config = load_config(&Layout::new(&manifest.project_root))?;
+        let cfg = config
+            .llm
+            .context("`--llm` needs an [llm] section in .qualyx/config.toml")?;
+        let facts = serde_json::to_string_pretty(&triage.groups)?;
+        let reply = qualyx_llm::complete(
+            &cfg,
+            TRIAGE_SYSTEM_PROMPT,
+            &qualyx_runners::redact::redact(&facts),
+            800,
+            false,
+        )
+        .map_err(|e| anyhow::anyhow!(e))?;
+        Some(reply.text)
+    } else {
+        None
+    };
+    Ok(TriageReport {
+        triage,
+        llm_hypothesis,
+    })
+}
+
+/// Probe the configured `[llm]` endpoint.
+pub fn llm_probe(path: &Path) -> Result<(qualyx_llm::ProviderConfig, qualyx_llm::Capabilities)> {
+    let root = discover(path)?.root;
+    let cfg = load_config(&Layout::new(&root))?
+        .llm
+        .context("no [llm] section in .qualyx/config.toml")?;
+    let caps = qualyx_llm::probe(&cfg);
+    Ok((cfg, caps))
 }
 
 #[derive(Debug, Clone, Serialize)]

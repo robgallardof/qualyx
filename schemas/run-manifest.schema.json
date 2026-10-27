@@ -58,6 +58,13 @@
       "format": "uint32",
       "minimum": 0
     },
+    "selection": {
+      "description": "Set when only part of the project ran (impact analysis), with the reason.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "started_at": {
       "type": "string",
       "format": "date-time"

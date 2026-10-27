@@ -76,7 +76,7 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
     let mut r = reader(xml);
     let mut tests = Vec::new();
     let mut current: Option<TestCase> = None;
-    // Text collected inside <failure>/<error>/<skipped> when it has no `message` attribute.
+    // Text inside <failure>/<error>/<skipped>: usually the traceback with file:line.
     let mut body: Option<String> = None;
 
     loop {
@@ -107,7 +107,7 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                                 _ => Status::Skipped,
                             };
                             tc.message = attr(e, "message")?.map(|m| truncate(&m));
-                            if tc.message.is_none() && !empty {
+                            if !empty {
                                 body = Some(String::new());
                             }
                         }
@@ -128,7 +128,7 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
             Event::End(e) => match e.name().as_ref() {
                 "failure" | "error" | "skipped" => {
                     if let (Some(tc), Some(b)) = (current.as_mut(), body.take()) {
-                        tc.message = Some(truncate(&b)).filter(|m| !m.is_empty());
+                        tc.message = merge(tc.message.take(), &b);
                     }
                 }
                 "testcase" => tests.extend(current.take()),
@@ -139,6 +139,17 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
         }
     }
     Ok(tests)
+}
+
+/// The summary message first, then the detail (traceback) when it adds something.
+fn merge(message: Option<String>, detail: &str) -> Option<String> {
+    let detail = detail.trim().replace("\r\n", "\n").replace('\r', "");
+    match message {
+        Some(m) if detail.is_empty() || m.contains(&detail) => Some(m),
+        Some(m) => Some(truncate(&format!("{m}\n\n{detail}"))),
+        None if detail.is_empty() => None,
+        None => Some(truncate(&detail)),
+    }
 }
 
 /// `hh:mm:ss.fffffff` as written by the TRX logger.
@@ -166,6 +177,7 @@ pub fn parse_trx(xml: &str) -> Result<Vec<TestCase>, ParseError> {
     let mut tests = Vec::new();
     let mut current: Option<TestCase> = None;
     let mut message: Option<String> = None;
+    let mut stack: Option<String> = None;
 
     loop {
         let event = r.read_event().map_err(err)?;
@@ -186,15 +198,16 @@ pub fn parse_trx(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                     }
                 }
                 "Message" if current.is_some() => message = Some(String::new()),
+                "StackTrace" if current.is_some() => stack = Some(String::new()),
                 _ => {}
             },
             Event::Text(t) => {
-                if let Some(m) = message.as_mut() {
+                if let Some(m) = message.as_mut().or(stack.as_mut()) {
                     m.push_str(&t.xml10_content());
                 }
             }
             Event::GeneralRef(r) => {
-                if let Some(m) = message.as_mut() {
+                if let Some(m) = message.as_mut().or(stack.as_mut()) {
                     push_ref(m, &r)?;
                 }
             }
@@ -202,6 +215,11 @@ pub fn parse_trx(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                 "Message" => {
                     if let (Some(tc), Some(m)) = (current.as_mut(), message.take()) {
                         tc.message = Some(truncate(&m.replace("\r\n", "\n").replace('\r', "")));
+                    }
+                }
+                "StackTrace" => {
+                    if let (Some(tc), Some(st)) = (current.as_mut(), stack.take()) {
+                        tc.message = merge(tc.message.take(), &st);
                     }
                 }
                 "UnitTestResult" => tests.extend(current.take()),
@@ -243,10 +261,12 @@ mod tests {
         assert_eq!(t[0].status, Status::Passed);
         assert_eq!(t[0].duration_ms, Some(1));
         assert_eq!(t[1].status, Status::Failed);
-        assert_eq!(
-            t[1].message.as_deref(),
-            Some("Expected values to be strictly equal:\n\n-1 !== 6")
+        let m = t[1].message.as_deref().unwrap();
+        assert!(
+            m.starts_with("Expected values to be strictly equal:\n\n-1 !== 6"),
+            "{m}"
         );
+        assert!(m.contains("ERR_TEST_FAILURE"), "{m}");
         assert_eq!(t[2].status, Status::Skipped);
     }
 
@@ -315,9 +335,14 @@ Actual:   -1</Message>
         assert_eq!(t[0].status, Status::Passed);
         assert_eq!(t[0].duration_ms, Some(80));
         assert_eq!(t[1].status, Status::Failed);
-        assert_eq!(
-            t[1].message.as_deref(),
-            Some("Assert.Equal() Failure: Values differ\nExpected: 6\nActual:   -1")
+        let m = t[1].message.as_deref().unwrap();
+        assert!(
+            m.starts_with("Assert.Equal() Failure: Values differ\nExpected: 6\nActual:   -1"),
+            "{m}"
+        );
+        assert!(
+            m.contains("at Failing.CalculatorTests.MultipliesTwoNumbers()"),
+            "{m}"
         );
         assert_eq!(t[2].status, Status::Skipped);
     }

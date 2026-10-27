@@ -17,6 +17,10 @@ qualyx-runners = { path = "crates/qualyx-runners" }
 qualyx-store = { path = "crates/qualyx-store" }
 qualyx-app = { path = "crates/qualyx-app" }
 qualyx-mcp = { path = "crates/qualyx-mcp" }
+qualyx-impact = { path = "crates/qualyx-impact" }
+qualyx-scheduler = { path = "crates/qualyx-scheduler" }
+qualyx-llm = { path = "crates/qualyx-llm" }
+qualyx-triage = { path = "crates/qualyx-triage" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
