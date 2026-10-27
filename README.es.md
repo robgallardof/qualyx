@@ -6,9 +6,12 @@
 
 <p align="center"><strong>Ejecuta pruebas reales. Conserva la evidencia.</strong></p>
 
-<p align="center"><a href="#start">Ejecuta tu primera prueba</a> · <a href="#evidence">Resultados que puedes revisar</a> · <a href="#agents">Úsalo con tu agente</a></p>
+<p align="center"><a href="#start"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-ejecuta-tu-primera-prueba-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-ejecuta-tu-primera-prueba-outline-sm-light.svg" alt="Ejecuta tu primera prueba" height="34" /></picture></a>&nbsp;
+<a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-resultados-que-puedes-revisar-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-resultados-que-puedes-revisar-outline-sm-light.svg" alt="Resultados que puedes revisar" height="34" /></picture></a>&nbsp;
+<a href="#agents"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-usalo-con-tu-agente-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-usalo-con-tu-agente-outline-sm-light.svg" alt="Úsalo con tu agente" height="34" /></picture></a></p>
 
-<p align="center"><a href="README.md">English</a> · <a href="README.es.md">Español</a></p>
+<p align="center"><a href="README.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-english-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-english-outline-sm-light.svg" alt="English" height="34" /></picture></a>&nbsp;
+<a href="README.es.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-espanol-primary-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-espanol-primary-sm-light.svg" alt="Español" height="34" /></picture></a></p>
 
 <a id="start"></a>
 
@@ -34,6 +37,8 @@ Para un ejemplo real pequeño, instala Python y pytest y ejecuta `qualyx test fi
 
 Códigos de salida: **0** aprobado · **1** fallos · **2** sin demostrar. Un proyecto vacío nunca aparece aprobado. El [flujo de paquetes](https://github.com/robgallardof/qualyx/actions/workflows/release.yml) genera archivos nativos y checksums; esto no implica una versión pública publicada.
 
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
+
 <a id="evidence"></a>
 
 ## <img src="assets/readme-builder/icons/file.svg" width="24" height="24" alt="" /> Resultados que puedes revisar
@@ -56,6 +61,8 @@ qualyx report ruta/al/proyecto --format markdown
 
 Los adaptadores opcionales cubren [navegadores y accesibilidad](docs/m4/browsers.md), [carga y seguridad](docs/m5/assurance.md), y [mutación, contratos y servicios](docs/m6/quality.md). Requieren sus herramientas y permisos; una ejecución normal no activa todos los adaptadores.
 
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
+
 <a id="agents"></a>
 
 ## <img src="assets/readme-builder/icons/bot.svg" width="24" height="24" alt="" /> Úsalo con tu agente
@@ -69,6 +76,8 @@ qualyx mcp-config codex --root /ruta/absoluta/al/proyecto
 El servidor se inicia con `qualyx mcp --root /ruta/absoluta/al/proyecto`. MCP permite descubrir proyectos, ejecutar pruebas y consultar evidencia. Generar una configuración no demuestra compatibilidad: consulta versiones verificadas y clientes pendientes en la [matriz de clientes](docs/m2/clients.md), incluidos Claude Code, Codex, Cursor y OpenCode.
 
 Las funciones asistidas por IA son opcionales. Mantén los permisos explícitos: ejecutar pruebas implica ejecutar código del proyecto.
+
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
 <a id="team"></a>
 
@@ -87,6 +96,8 @@ La [guía bilingüe de equipo](docs/m7/team.md) incluye Compose, credenciales, S
 Cada trabajador procesa un trabajo a la vez. La cola admite hasta 64 trabajos pendientes/en ejecución. Si vence la sesión de un trabajador, el trabajo falla sin repetir automáticamente sus efectos externos. Un trabajo terminado no significa pruebas aprobadas: revisa `manifest.status`.
 
 **Límite del despliegue:** solo copias de proyectos de confianza. La imagen incluye Python/pytest; otros ecosistemas necesitan una imagen propia. No incluye RBAC por usuario, aislamiento multiusuario hostil, TLS remoto para PostgreSQL, alta disponibilidad, versiones firmadas ni SBOM formal. Lee [SECURITY.md](SECURITY.md) antes de exponerlo remotamente.
+
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
 <a id="develop"></a>
 
@@ -109,7 +120,7 @@ Este README usa [Readme Builder](https://github.com/robgallardof/readme-builder)
 
 Doble licencia: [MIT](LICENSE-MIT) o [Apache-2.0](LICENSE-APACHE), a tu elección. [Avisos de los recursos del README](docs/readme/THIRD-PARTY-NOTICES.md).
 
-<p align="center"><a href="#top">Volver al inicio</a></p>
+<p align="center"><a href="#top"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-volver-al-inicio-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-volver-al-inicio-outline-sm-light.svg" alt="Volver al inicio" height="34" /></picture></a></p>
 
 <!-- readme-builder:signature:start -->
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/es/footer-dark.svg" /><img src="assets/readme-builder/es/footer-light.svg" alt="Qualyx" width="100%" /></picture></p>

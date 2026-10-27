@@ -6,9 +6,12 @@
 
 <p align="center"><strong>Run real tests. Keep the evidence.</strong></p>
 
-<p align="center"><a href="#start">Run your first check</a> · <a href="#evidence">Results you can inspect</a> · <a href="#agents">Use it with your agent</a></p>
+<p align="center"><a href="#start"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-run-your-first-check-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-run-your-first-check-outline-sm-light.svg" alt="Run your first check" height="34" /></picture></a>&nbsp;
+<a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-results-you-can-inspect-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-results-you-can-inspect-outline-sm-light.svg" alt="Results you can inspect" height="34" /></picture></a>&nbsp;
+<a href="#agents"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-use-it-with-your-agent-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-use-it-with-your-agent-outline-sm-light.svg" alt="Use it with your agent" height="34" /></picture></a></p>
 
-<p align="center"><a href="README.md">English</a> · <a href="README.es.md">Español</a></p>
+<p align="center"><a href="README.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-english-primary-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-english-primary-sm-light.svg" alt="English" height="34" /></picture></a>&nbsp;
+<a href="README.es.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-espanol-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-espanol-outline-sm-light.svg" alt="Español" height="34" /></picture></a></p>
 
 <a id="start"></a>
 
@@ -34,6 +37,8 @@ For a small real example, install Python and pytest, then run `qualyx test fixtu
 
 Exit codes: **0** passed · **1** failures · **2** unproven. An empty project is never green. Native archives and checksums are built by the [package workflow](https://github.com/robgallardof/qualyx/actions/workflows/release.yml); this does not imply a published release.
 
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
+
 <a id="evidence"></a>
 
 ## <img src="assets/readme-builder/icons/file.svg" width="24" height="24" alt="" /> Results you can inspect
@@ -56,6 +61,8 @@ qualyx report path/to/project --format markdown
 
 Optional adapters cover [browsers and accessibility](docs/m4/browsers.md), [load and security](docs/m5/assurance.md), and [mutation, contracts and services](docs/m6/quality.md). They require their own tools and permissions; a default run does not execute every adapter.
 
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
+
 <a id="agents"></a>
 
 ## <img src="assets/readme-builder/icons/bot.svg" width="24" height="24" alt="" /> Use it with your agent
@@ -69,6 +76,8 @@ qualyx mcp-config codex --root /absolute/path/to/project
 The server command is `qualyx mcp --root /absolute/path/to/project`. MCP exposes discovery, execution and evidence to compatible clients. Configuration output does not prove client compatibility: see the [tested client matrix](docs/m2/clients.md) for verified versions and unverified clients, including Claude Code, Codex, Cursor and OpenCode.
 
 AI-assisted features are optional. Keep permissions explicit: running tests executes the project's own code.
+
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
 <a id="team"></a>
 
@@ -87,6 +96,8 @@ The [bilingual team guide](docs/m7/team.md) includes the complete Compose setup,
 Each worker processes one job at a time. The queue holds at most 64 queued/running jobs. Expired worker leases fail jobs rather than automatically repeating external side effects. A finished job is not necessarily a passing test: inspect `manifest.status`.
 
 **Deployment boundary:** trusted project copies only. The supplied image includes Python/pytest; other toolchains need a custom image. No per-user RBAC, hostile multi-tenant isolation, remote PostgreSQL TLS, HA, signed releases or formal SBOM is claimed. Read [SECURITY.md](SECURITY.md) before remote exposure.
+
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
 <a id="develop"></a>
 
@@ -109,7 +120,7 @@ This README uses [Readme Builder](https://github.com/robgallardof/readme-builder
 
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option. [README asset notices](docs/readme/THIRD-PARTY-NOTICES.md).
 
-<p align="center"><a href="#top">Back to top</a></p>
+<p align="center"><a href="#top"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-back-to-top-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-back-to-top-outline-sm-light.svg" alt="Back to top" height="34" /></picture></a></p>
 
 <!-- readme-builder:signature:start -->
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/en/footer-dark.svg" /><img src="assets/readme-builder/en/footer-light.svg" alt="Qualyx" width="100%" /></picture></p>
