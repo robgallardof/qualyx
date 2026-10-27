@@ -10,7 +10,10 @@ authors.workspace = true
 [dependencies]
 chrono = "0.4.45"
 qualyx-core.workspace = true
-quick-xml = "0.41.0"
+quick-xml = "0.42"
+regex = "1.13.1"
+sha2 = "0.11.1"
+tempfile = "3.27.0"
 wait-timeout = "0.2.1"
 which = "8.0.6"
 

@@ -1,0 +1,25 @@
+[package]
+name = "qualyx-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+anyhow = "1.0.104"
+chrono = "0.4.45"
+qualyx-core.workspace = true
+qualyx-discovery.workspace = true
+qualyx-runners.workspace = true
+qualyx-store.workspace = true
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+toml = "1.1.8"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+tempfile = "3.27.0"

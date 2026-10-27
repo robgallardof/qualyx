@@ -305,6 +305,7 @@ mod tests {
             git: None,
             os: "linux".into(),
             arch: "x86_64".into(),
+            isolation: Isolation::Process,
             started_at: at,
             finished_at: at,
             status,
@@ -316,6 +317,7 @@ mod tests {
                 command: vec!["cargo".into(), "test".into()],
                 exit_code: Some(0),
                 timed_out: false,
+                cancelled: false,
                 started_at: at,
                 finished_at: at,
                 duration_ms: 10,
@@ -326,6 +328,7 @@ mod tests {
                 artifacts: vec!["rust.log".into()],
                 notes: vec![],
             }],
+            artifact_sha256: Default::default(),
         }
     }
 

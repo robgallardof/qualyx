@@ -3,6 +3,7 @@
 //! These types are the public contract: they are serialized into `manifest.json`, stored in
 //! SQLite and exported as JSON Schemas under `schemas/`. Changing a field is a schema change.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
@@ -138,6 +139,26 @@ impl Status {
     }
 }
 
+/// Where the native tools run (ADR 0004).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum Isolation {
+    /// Local subprocess with the user's privileges and a filtered environment.
+    #[default]
+    Process,
+    /// A throwaway container over a copy of the project (Docker-compatible engine).
+    Container,
+}
+
+impl Isolation {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Isolation::Process => "process",
+            Isolation::Container => "container",
+        }
+    }
+}
+
 /// How much of a runner's result is backed by per-test evidence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -206,6 +227,9 @@ pub struct RunnerResult {
     pub command: Vec<String>,
     pub exit_code: Option<i32>,
     pub timed_out: bool,
+    /// Stopped on request (`qa_cancel`, Ctrl-C) before finishing.
+    #[serde(default)]
+    pub cancelled: bool,
     pub started_at: DateTime<Utc>,
     pub finished_at: DateTime<Utc>,
     pub duration_ms: u64,
@@ -238,11 +262,17 @@ pub struct RunManifest {
     pub git: Option<GitInfo>,
     pub os: String,
     pub arch: String,
+    #[serde(default)]
+    pub isolation: Isolation,
     pub started_at: DateTime<Utc>,
     pub finished_at: DateTime<Utc>,
     pub status: Status,
     pub counts: Counts,
     pub runners: Vec<RunnerResult>,
+    /// SHA-256 of every runner artifact, keyed by its path in the run dir. Lets a reader
+    /// detect evidence edited after the run (threat model T5).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub artifact_sha256: BTreeMap<String, String>,
 }
 
 impl RunManifest {

@@ -233,3 +233,66 @@ fn evidence_files_exist_for_every_artifact() {
         assert!(run_dir.join(a).is_file(), "missing artifact {a}");
     }
 }
+
+/// Container isolation needs a Linux-container engine. Opt in with QUALYX_TEST_DOCKER=1
+/// (CI does on ubuntu); otherwise the test states it did not run instead of passing silently.
+fn docker_enabled() -> bool {
+    let on = std::env::var("QUALYX_TEST_DOCKER").is_ok_and(|v| v == "1");
+    if !on {
+        eprintln!("NOT RUN: set QUALYX_TEST_DOCKER=1 to exercise container isolation");
+    }
+    on
+}
+
+fn run_fixture_in_container(ecosystem: &str, kind: &str) -> Outcome {
+    let dir = tempfile::tempdir().unwrap();
+    copy_dir(&fixture(ecosystem, kind), dir.path());
+    let test = Command::new(BIN)
+        .args(["test", "--isolation", "container"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    let report = Command::new(BIN)
+        .args(["report", "--format", "json"])
+        .arg(dir.path())
+        .output()
+        .unwrap();
+    let manifest: RunManifest = serde_json::from_slice(&report.stdout).unwrap();
+    Outcome {
+        exit: test.status.code().unwrap(),
+        manifest,
+        _dir: dir,
+    }
+}
+
+#[test]
+fn container_python_failing() {
+    if !docker_enabled() {
+        return;
+    }
+    let o = run_fixture_in_container("python", "failing");
+    let r = &o.manifest.runners[0];
+    assert_eq!(o.manifest.isolation, qualyx_core::Isolation::Container);
+    assert_eq!(o.manifest.status, Status::Failed, "notes: {:?}", r.notes);
+    assert_eq!(o.exit, 1);
+    assert_eq!(
+        names_with(&o.manifest, Status::Failed),
+        ["test_multiplies_two_numbers"]
+    );
+    // The project copy, not the original, was used: no build outputs leak back.
+    assert!(!o.manifest.project_root.join(".pytest_cache").exists());
+}
+
+#[test]
+fn container_node_passing() {
+    if !docker_enabled() {
+        return;
+    }
+    let o = run_fixture_in_container("node", "passing");
+    let r = &o.manifest.runners[0];
+    assert_eq!(o.manifest.status, Status::Passed, "notes: {:?}", r.notes);
+    assert_eq!(
+        names_with(&o.manifest, Status::Skipped),
+        ["skipped on purpose"]
+    );
+}

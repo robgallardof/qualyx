@@ -48,7 +48,7 @@ fn push_ref(out: &mut String, r: &BytesRef<'_>) -> Result<(), ParseError> {
         out.push(c);
         return Ok(());
     }
-    let name = r.decode().map_err(err)?;
+    let name = r.xml10_content();
     out.push_str(match name.as_ref() {
         "lt" => "<",
         "gt" => ">",
@@ -85,7 +85,7 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
             Event::Start(ref e) | Event::Empty(ref e) => {
                 let empty = matches!(event, Event::Empty(_));
                 match e.name().as_ref() {
-                    b"testcase" => {
+                    "testcase" => {
                         let tc = TestCase {
                             name: attr(e, "name")?.unwrap_or_default(),
                             suite: attr(e, "classname")?.filter(|s| !s.is_empty()),
@@ -99,11 +99,11 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                             current = Some(tc);
                         }
                     }
-                    tag @ (b"failure" | b"error" | b"skipped") => {
+                    tag @ ("failure" | "error" | "skipped") => {
                         if let Some(tc) = current.as_mut() {
                             tc.status = match tag {
-                                b"failure" => Status::Failed,
-                                b"error" => Status::Error,
+                                "failure" => Status::Failed,
+                                "error" => Status::Error,
                                 _ => Status::Skipped,
                             };
                             tc.message = attr(e, "message")?.map(|m| truncate(&m));
@@ -117,7 +117,7 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
             }
             Event::Text(t) => {
                 if let Some(b) = body.as_mut() {
-                    b.push_str(&t.decode().map_err(err)?);
+                    b.push_str(&t.xml10_content());
                 }
             }
             Event::GeneralRef(r) => {
@@ -126,12 +126,12 @@ pub fn parse_junit(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                 }
             }
             Event::End(e) => match e.name().as_ref() {
-                b"failure" | b"error" | b"skipped" => {
+                "failure" | "error" | "skipped" => {
                     if let (Some(tc), Some(b)) = (current.as_mut(), body.take()) {
                         tc.message = Some(truncate(&b)).filter(|m| !m.is_empty());
                     }
                 }
-                b"testcase" => tests.extend(current.take()),
+                "testcase" => tests.extend(current.take()),
                 _ => {}
             },
             Event::Eof => break,
@@ -171,7 +171,7 @@ pub fn parse_trx(xml: &str) -> Result<Vec<TestCase>, ParseError> {
         let event = r.read_event().map_err(err)?;
         match event {
             Event::Start(ref e) | Event::Empty(ref e) => match e.name().as_ref() {
-                b"UnitTestResult" => {
+                "UnitTestResult" => {
                     let tc = TestCase {
                         name: attr(e, "testName")?.unwrap_or_default(),
                         suite: None,
@@ -185,12 +185,12 @@ pub fn parse_trx(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                         current = Some(tc);
                     }
                 }
-                b"Message" if current.is_some() => message = Some(String::new()),
+                "Message" if current.is_some() => message = Some(String::new()),
                 _ => {}
             },
             Event::Text(t) => {
                 if let Some(m) = message.as_mut() {
-                    m.push_str(&t.decode().map_err(err)?);
+                    m.push_str(&t.xml10_content());
                 }
             }
             Event::GeneralRef(r) => {
@@ -199,12 +199,12 @@ pub fn parse_trx(xml: &str) -> Result<Vec<TestCase>, ParseError> {
                 }
             }
             Event::End(e) => match e.name().as_ref() {
-                b"Message" => {
+                "Message" => {
                     if let (Some(tc), Some(m)) = (current.as_mut(), message.take()) {
                         tc.message = Some(truncate(&m.replace("\r\n", "\n").replace('\r', "")));
                     }
                 }
-                b"UnitTestResult" => tests.extend(current.take()),
+                "UnitTestResult" => tests.extend(current.take()),
                 _ => {}
             },
             Event::Eof => break,

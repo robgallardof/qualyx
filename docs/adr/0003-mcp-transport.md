@@ -1,6 +1,6 @@
 # ADR 0003 — MCP transport and SDK
 
-- Status: accepted for M2 (2026-10-26)
+- Status: implemented in M2 (2026-10-26)
 
 ## Decision
 - Official Rust SDK `rmcp` (modelcontextprotocol/rust-sdk, 3.8 at decision time, Apache-2.0).

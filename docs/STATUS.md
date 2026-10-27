@@ -6,7 +6,7 @@ Last updated: 2026-10-26.
 |---|---|---|
 | M0 — research & threat model | **done** | [integration matrix](m0/integration-matrix.md), [threat model](m0/threat-model.md), ADRs [0001](adr/0001-rust-workspace.md)–[0005](adr/0005-adapter-sdk.md) |
 | M1 — deterministic vertical slice | **done** (Windows, Linux, macOS) | below |
-| M2 — MCP + isolation | not started | — |
+| M2 — MCP + isolation | **done** | below, [client matrix](m2/clients.md) |
 
 ## M1 gate
 
@@ -44,13 +44,31 @@ Linux and macOS: the same suite passed in [CI](../.github/workflows/ci.yml) on c
 `ubuntu-latest`, `windows-latest` and `macos-latest` all green, with .NET 10, Node 24,
 Python 3.13 and pytest 8.3.5.
 
+## M2 gate
+
+> Safe execution, cancellation, error recovery and denial tests.
+
+| Requirement | Evidence |
+|---|---|
+| MCP server, scoped tools, async run ids | `qualyx mcp --root <dir>` (rmcp 3.8, stdio): 10 tools. `qa_run` returns a run id at once, `qa_run_status` polls it |
+| Generic MCP compliance | `tests/mcp.rs` speaks raw JSON-RPC: initialize, tools/list with schemas and annotations, protocol errors, tool errors |
+| Cancellation | `qa_cancel` on a 120 s test: the run ends in seconds as `error` / "cancelled on request" (`cancel_stops_a_long_run_quickly`) |
+| Process-tree kill | `process::tests::{timeout_kills_the_tree, cancellation_stops_the_process}` use a shell that spawns a grandchild |
+| Denials | paths outside `--root` (including `..` tricks), artifact names outside the run, unknown isolation: all refused and audited (`paths_outside_roots_and_artifact_traversal_are_denied`) |
+| Audit trail | `<root>/.qualyx/mcp-audit.jsonl`, one JSON line per call with the decision |
+| Environment allowlist | children get toolchain variables only. Names with TOKEN/SECRET/KEY/AUTH/PASSWORD are always dropped (`child_does_not_see_secrets`) |
+| Secret redaction | logs and failure messages are masked for known token shapes and for the values of the server's own credential variables |
+| Evidence integrity | `artifact_sha256` in the manifest, `qualyx verify` / `qa_verify` |
+| Container runner | `--isolation container`: a copy of the project, `--cap-drop=ALL`, `no-new-privileges`, pids/memory limits. Python and Node verified with Docker 29.8 locally and on ubuntu CI. Rust (`rust:1`) and .NET (`dotnet/sdk:10.0`) images are wired but **not yet verified** |
+| Named clients | Claude Code 2.1.311 and Codex CLI 0.164.0 called `qa_discover` for real (see [clients](m2/clients.md)) |
+
 ## Known limitations (M1)
 
 - Discovery only looks at the project root. Monorepos and nested projects come later.
 - Node: only a plain `node --test` script gets per-test evidence. Jest, Vitest, Mocha and the rest
   run via `npm test` and are graded on **exit code only**, which the report says explicitly.
-- On timeout only the direct child process is killed. Grandchildren (e.g. spawned by `npm.cmd`)
-  may survive. Process-tree kill is in M2.
-- Tests run with the user's privileges (threat model T1). Isolation is in M2.
+- ~~On timeout only the direct child process is killed~~ (fixed in M2: process-tree kill).
+- In `process` isolation, tests still run with the user's privileges (threat model T1). Use
+  `--isolation container` for untrusted code.
 - The TRX file name chosen by `dotnet test` includes the user and machine name. It stays in the
   local, gitignored `.qualyx/` folder.

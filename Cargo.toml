@@ -5,7 +5,7 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.89"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/robgallardof/qualyx"
 authors = ["Roberto Gallardo"]
@@ -15,6 +15,8 @@ qualyx-core = { path = "crates/qualyx-core" }
 qualyx-discovery = { path = "crates/qualyx-discovery" }
 qualyx-runners = { path = "crates/qualyx-runners" }
 qualyx-store = { path = "crates/qualyx-store" }
+qualyx-app = { path = "crates/qualyx-app" }
+qualyx-mcp = { path = "crates/qualyx-mcp" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

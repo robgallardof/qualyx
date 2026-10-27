@@ -25,8 +25,12 @@ pub struct Collected {
     pub notes: Vec<String>,
 }
 
+/// Maps an artifact file name to the path the tool must write it to. On the host that is
+/// inside the run dir; in a container it is under the mounted output directory.
+pub type OutPath<'a> = &'a dyn Fn(&str) -> String;
+
 pub trait Runner: Sync {
-    fn plan(&self, detected: &DetectedEcosystem, out_dir: &Path) -> Invocation;
+    fn plan(&self, detected: &DetectedEcosystem, out: OutPath<'_>) -> Invocation;
     fn collect(&self, log: &str, out_dir: &Path) -> Collected;
 }
 
@@ -38,10 +42,6 @@ pub fn runner_for(tool: TestTool) -> &'static dyn Runner {
         TestTool::NpmScript => &NpmScript,
         TestTool::Pytest => &Pytest,
     }
-}
-
-fn path_arg(p: &Path) -> String {
-    p.to_string_lossy().into_owned()
 }
 
 /// Parse one JUnit file written by the tool into `Collected`.
@@ -63,7 +63,7 @@ fn collect_junit(out_dir: &Path, file: &str) -> Collected {
 pub struct CargoTest;
 
 impl Runner for CargoTest {
-    fn plan(&self, _: &DetectedEcosystem, _: &Path) -> Invocation {
+    fn plan(&self, _: &DetectedEcosystem, _: OutPath<'_>) -> Invocation {
         Invocation {
             program: &["cargo"],
             args: ["test", "--no-fail-fast", "--color", "never"]
@@ -87,13 +87,13 @@ pub struct DotnetTest;
 const TRX_DIR: &str = "dotnet-trx";
 
 impl Runner for DotnetTest {
-    fn plan(&self, detected: &DetectedEcosystem, out_dir: &Path) -> Invocation {
+    fn plan(&self, detected: &DetectedEcosystem, out: OutPath<'_>) -> Invocation {
         let mut args = vec!["test".to_string()];
         args.extend(detected.target.clone());
         args.extend([
             "--nologo".into(),
             "--results-directory".into(),
-            path_arg(&out_dir.join(TRX_DIR)),
+            out(TRX_DIR),
             "--logger".into(),
             "trx".into(),
         ]);
@@ -139,7 +139,7 @@ pub struct NodeTest;
 const NODE_JUNIT: &str = "node.junit.xml";
 
 impl Runner for NodeTest {
-    fn plan(&self, _: &DetectedEcosystem, out_dir: &Path) -> Invocation {
+    fn plan(&self, _: &DetectedEcosystem, out: OutPath<'_>) -> Invocation {
         // Appended to the `node --test` script; the spec reporter keeps the log readable.
         Invocation {
             program: &["npm"],
@@ -149,10 +149,7 @@ impl Runner for NodeTest {
                 "--test-reporter=spec".into(),
                 "--test-reporter-destination=stdout".into(),
                 "--test-reporter=junit".into(),
-                format!(
-                    "--test-reporter-destination={}",
-                    path_arg(&out_dir.join(NODE_JUNIT))
-                ),
+                format!("--test-reporter-destination={}", out(NODE_JUNIT)),
             ],
             version_args: &["--version"],
             detail: Detail::PerTest,
@@ -167,7 +164,7 @@ impl Runner for NodeTest {
 pub struct NpmScript;
 
 impl Runner for NpmScript {
-    fn plan(&self, _: &DetectedEcosystem, _: &Path) -> Invocation {
+    fn plan(&self, _: &DetectedEcosystem, _: OutPath<'_>) -> Invocation {
         Invocation {
             program: &["npm"],
             args: vec!["test".into()],
@@ -191,7 +188,7 @@ pub struct Pytest;
 const PYTEST_JUNIT: &str = "pytest.junit.xml";
 
 impl Runner for Pytest {
-    fn plan(&self, _: &DetectedEcosystem, out_dir: &Path) -> Invocation {
+    fn plan(&self, _: &DetectedEcosystem, out: OutPath<'_>) -> Invocation {
         Invocation {
             program: &["python", "python3"],
             args: vec![
@@ -199,7 +196,7 @@ impl Runner for Pytest {
                 "pytest".into(),
                 "-p".into(),
                 "no:cacheprovider".into(),
-                format!("--junitxml={}", path_arg(&out_dir.join(PYTEST_JUNIT))),
+                format!("--junitxml={}", out(PYTEST_JUNIT)),
             ],
             version_args: &["-m", "pytest", "--version"],
             detail: Detail::PerTest,
@@ -279,14 +276,16 @@ mod tests {
 
     #[test]
     fn dotnet_passes_target_and_trx_logger() {
-        let inv = DotnetTest.plan(&det(TestTool::DotnetTest, Some("A.sln")), Path::new("out"));
+        let inv = DotnetTest.plan(&det(TestTool::DotnetTest, Some("A.sln")), &|f| {
+            format!("out/{f}")
+        });
         assert_eq!(inv.args[0..2], ["test", "A.sln"]);
         assert!(inv.args.windows(2).any(|w| w == ["--logger", "trx"]));
     }
 
     #[test]
     fn pytest_writes_junit_into_run_dir() {
-        let inv = Pytest.plan(&det(TestTool::Pytest, None), Path::new("out"));
+        let inv = Pytest.plan(&det(TestTool::Pytest, None), &|f| format!("out/{f}"));
         assert!(
             inv.args
                 .iter()
