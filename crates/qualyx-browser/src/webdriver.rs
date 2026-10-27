@@ -3,6 +3,7 @@
 
 use std::net::TcpListener;
 use std::process::{Child, Command, Stdio};
+use std::sync::{Mutex, MutexGuard};
 use std::time::Duration;
 
 use base64::Engine;
@@ -10,10 +11,15 @@ use serde_json::{Value, json};
 
 use crate::{ConsoleEntry, Driver, Result, err, wait_until};
 
+// Safari supports one WebDriver session at a time. Keep the permit for the
+// driver's entire lifetime so parallel callers cannot break each other's pairing.
+static SAFARI_SESSION: Mutex<()> = Mutex::new(());
+
 pub struct Safari {
     child: Child,
     base: String,
     session: String,
+    _session_guard: MutexGuard<'static, ()>,
 }
 
 fn free_port() -> Result<u16> {
@@ -47,6 +53,9 @@ fn parse(mut r: ureq::http::Response<ureq::Body>) -> Result<Value> {
 
 impl Safari {
     pub fn launch() -> Result<Safari> {
+        let session_guard = SAFARI_SESSION
+            .lock()
+            .map_err(|_| err("Safari session lock poisoned"))?;
         let port = free_port()?;
         let child = Command::new("safaridriver")
             .args(["-p", &port.to_string()])
@@ -68,6 +77,7 @@ impl Safari {
             child,
             base,
             session: String::new(),
+            _session_guard: session_guard,
         };
         let v = s.post(
             "/session",

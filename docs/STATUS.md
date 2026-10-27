@@ -30,6 +30,10 @@ The driver now creates its own top-level context using the W3C command rather th
 the startup window is ready. Real-browser coverage repeats Firefox launch/navigation three
 times and retains all seeded accessibility/login assertions. Local Firefox is unavailable;
 that integration is validated by the Windows/Linux CI hosts, not a protocol mock.
+The next macOS run exposed Safari's documented one-session limit under parallel callers.
+Safari now holds a process-wide permit for the full driver lifetime; the same parallel
+real-browser suite remains the regression gate. Other programs/processes must still
+coordinate access to Safari on that host. Reference: [Apple WebDriver](https://developer.apple.com/documentation/safari-developer-tools/webdriver).
 
 Implemented:
 
