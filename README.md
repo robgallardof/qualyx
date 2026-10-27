@@ -17,7 +17,7 @@
 
 ## <img src="assets/readme-builder/icons/rocket.svg" width="24" height="24" alt="" /> Run your first check
 
-Qualyx discovers a project's tests, runs its native tools and preserves the evidence. Use it from a terminal, an MCP agent or a shared API. **Deterministic execution needs no AI model.**
+Qualyx discovers a project's tests, runs its native tools and preserves the evidence. Use it from a terminal, an MCP agent or a shared API, and look back at the results in a web console. **Deterministic execution needs no AI model.**
 
 Core workflows are verified within the [documented scope](docs/STATUS.md); the [full roadmap remains incomplete](docs/READINESS.md). CI validates Windows, Linux and macOS, including real browsers and installation smoke tests. For a downloaded binary, follow [native installation](INSTALL.md).
 
@@ -35,7 +35,13 @@ qualyx report path/to/project
 
 For a small real example, install Python and pytest, then run `qualyx test fixtures/python/passing`. The companion `fixtures/python/failing` deliberately fails. Tests execute project code: use repositories you trust.
 
-Exit codes: **0** passed · **1** failures · **2** unproven. An empty project is never green. Native archives and checksums are built by the [package workflow](https://github.com/robgallardof/qualyx/actions/workflows/release.yml); this does not imply a published release.
+| Exit code | Meaning |
+|---|---|
+| `0` | Passed |
+| `1` | At least one test failed |
+| `2` | Nothing proven: an error, or an inconclusive result such as finding no tests |
+
+An empty project is never green. Native archives and checksums are built by the [package workflow](https://github.com/robgallardof/qualyx/actions/workflows/release.yml); this does not imply a published release.
 
 <p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
@@ -81,28 +87,39 @@ AI-assisted features are optional. Keep permissions explicit: running tests exec
 
 <p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
+<a id="console"></a>
+
+## <img src="assets/readme-builder/icons/lucide-panels-top-left.svg" width="24" height="24" alt="" /> See your runs in the console
+
+Tests run from your terminal or your agent. To look back at them, `qualyx serve` gives you a small web console:
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/console-en-dark.png" /><img src="assets/screenshots/console-en-light.png" alt="Qualyx console: eight runs of a project, six passed and two with failures, with the report link on each row" width="100%" /></picture></p>
+
+- **History at a glance:** how many runs passed, failed or are still going, with search by run ID and a status filter.
+- **The evidence, not a summary:** open any run's `report.md` exactly as Qualyx wrote it.
+- **Light or dark, English or Spanish:** it follows your system and browser, and you can switch both.
+- **Read-only on purpose:** it never starts or cancels anything, so leaving it open is harmless.
+
+```sh
+export QUALYX_API_TOKEN="$(openssl rand -hex 24)"   # 32+ printable characters
+qualyx serve --root /path/to/projects               # then open http://127.0.0.1:7878
+```
+
+Enter a project path under `--root` and the token. The token lives only in that tab and is gone when you reload. The console is built into the `qualyx` binary, so there is nothing else to install or run: no Node.js, no separate server.
+
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
+
 <a id="team"></a>
 
 ## <img src="assets/readme-builder/icons/layers.svg" width="24" height="24" alt="" /> Share execution with your team
 
-Local CLI/MCP uses SQLite by default. Team mode adds an authenticated HTTP API, a read-only dashboard, PostgreSQL jobs, separate workers and optional S3-compatible evidence storage.
+Local CLI/MCP uses SQLite by default. Team mode adds an authenticated HTTP API, the read-only [console](#console), PostgreSQL jobs, separate workers and optional S3-compatible evidence storage.
 
 | Mode | Use it for | Needs |
 |---|---|---|
 | Local CLI / MCP | One checkout, local evidence | Native test tools |
 | Local API | Up to four concurrent runs | Token and allowed project roots |
 | Durable team API | Shared queue, independent workers | PostgreSQL; optional S3 |
-
-### Review results in the console
-
-`qualyx serve` also serves a read-only web console at `/`: run history, pass/fail counts, search and filters, and each run's report. It is built with Next.js and shadcn/ui, has light and dark themes and is available in English and Spanish. It is bundled inside the `qualyx` binary, so no Node.js server is needed. It never starts or cancels runs: your terminal or MCP agent does that.
-
-```sh
-export QUALYX_API_TOKEN="$(openssl rand -hex 24)"   # 32+ printable characters
-qualyx serve --root /path/to/projects               # http://127.0.0.1:7878
-```
-
-Open `http://127.0.0.1:7878`, enter a project path under `--root` and the token. The token stays in that tab's memory only.
 
 The [bilingual team guide](docs/m7/team.md) includes the complete Compose setup, credentials, Python SDK, cancellation, backups and recovery. Start there before deploying `deploy/team/compose.yaml`.
 

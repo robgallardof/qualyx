@@ -17,7 +17,7 @@
 
 ## <img src="assets/readme-builder/icons/rocket.svg" width="24" height="24" alt="" /> Ejecuta tu primera prueba
 
-Qualyx descubre las pruebas de un proyecto, ejecuta sus herramientas nativas y conserva la evidencia. Úsalo desde la terminal, un agente MCP o una API compartida. **La ejecución determinista no necesita un modelo de IA.**
+Qualyx descubre las pruebas de un proyecto, ejecuta sus herramientas nativas y conserva la evidencia. Úsalo desde la terminal, un agente MCP o una API compartida, y revisa los resultados en una consola web. **La ejecución determinista no necesita un modelo de IA.**
 
 Los flujos principales están verificados con el [alcance documentado](docs/STATUS.md); el [plan completo sigue pendiente](docs/READINESS.md). CI valida Windows, Linux y macOS, incluidos navegadores reales y pruebas de instalación. Para un binario descargado, sigue la [instalación nativa](INSTALL.md).
 
@@ -35,7 +35,13 @@ qualyx report ruta/al/proyecto
 
 Para un ejemplo real pequeño, instala Python y pytest y ejecuta `qualyx test fixtures/python/passing`. El proyecto `fixtures/python/failing` falla intencionalmente. Las pruebas ejecutan código del proyecto: usa repositorios de confianza.
 
-Códigos de salida: **0** aprobado · **1** fallos · **2** sin demostrar. Un proyecto vacío nunca aparece aprobado. El [flujo de paquetes](https://github.com/robgallardof/qualyx/actions/workflows/release.yml) genera archivos nativos y checksums; esto no implica una versión pública publicada.
+| Código de salida | Significado |
+|---|---|
+| `0` | Aprobado |
+| `1` | Falló al menos una prueba |
+| `2` | Nada demostrado: un error o un resultado inconcluso, como no encontrar pruebas |
+
+Un proyecto vacío nunca aparece aprobado. El [flujo de paquetes](https://github.com/robgallardof/qualyx/actions/workflows/release.yml) genera archivos nativos y checksums; esto no implica una versión pública publicada.
 
 <p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
@@ -81,28 +87,39 @@ Las funciones asistidas por IA son opcionales. Mantén los permisos explícitos:
 
 <p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 
+<a id="console"></a>
+
+## <img src="assets/readme-builder/icons/lucide-panels-top-left.svg" width="24" height="24" alt="" /> Mira tus ejecuciones en la consola
+
+Las pruebas se ejecutan desde tu terminal o tu agente. Para revisarlas después, `qualyx serve` te da una pequeña consola web:
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/console-es-dark.png" /><img src="assets/screenshots/console-es-light.png" alt="Consola de Qualyx: ocho ejecuciones de un proyecto, seis correctas y dos con fallos, con el enlace al reporte en cada fila" width="100%" /></picture></p>
+
+- **El historial de un vistazo:** cuántas ejecuciones pasaron, fallaron o siguen en curso, con búsqueda por identificador y filtro por estado.
+- **La evidencia, no un resumen:** abre el `report.md` de cualquier ejecución tal como lo escribió Qualyx.
+- **Claro u oscuro, español o inglés:** sigue a tu sistema y a tu navegador, y puedes cambiar ambos.
+- **Solo lectura a propósito:** nunca inicia ni cancela nada, así que dejarla abierta no tiene riesgo.
+
+```sh
+export QUALYX_API_TOKEN="$(openssl rand -hex 24)"   # 32+ caracteres imprimibles
+qualyx serve --root /ruta/a/proyectos               # luego abre http://127.0.0.1:7878
+```
+
+Escribe la ruta de un proyecto dentro de `--root` y el token. El token solo vive en esa pestaña y se borra al recargar. La consola viene dentro del binario `qualyx`, así que no hay nada más que instalar ni levantar: ni Node.js ni otro servidor.
+
+<p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
+
 <a id="team"></a>
 
 ## <img src="assets/readme-builder/icons/layers.svg" width="24" height="24" alt="" /> Comparte la ejecución con tu equipo
 
-La CLI y MCP usan SQLite por defecto. El modo equipo agrega API HTTP autenticada, panel de lectura, trabajos en PostgreSQL, trabajadores separados y almacenamiento opcional de evidencia compatible con S3.
+La CLI y MCP usan SQLite por defecto. El modo equipo agrega API HTTP autenticada, la [consola](#console) de solo lectura, trabajos en PostgreSQL, trabajadores separados y almacenamiento opcional de evidencia compatible con S3.
 
 | Modo | Para qué sirve | Requisitos |
 |---|---|---|
 | CLI / MCP local | Un proyecto, evidencia local | Herramientas nativas |
 | API local | Hasta cuatro ejecuciones simultáneas | Token y raíces de proyecto permitidas |
 | API de equipo | Cola persistente y trabajadores independientes | PostgreSQL; S3 opcional |
-
-### Revisa resultados en la consola
-
-`qualyx serve` también sirve una consola web de solo lectura en `/`: historial de ejecuciones, conteo de pruebas correctas y fallidas, búsqueda, filtros y el reporte de cada ejecución. Está hecha con Next.js y shadcn/ui, tiene tema claro y oscuro y está en español e inglés. Va incluida dentro del binario `qualyx`, así que no necesitas un servidor de Node.js. Nunca inicia ni cancela ejecuciones: eso lo hace tu terminal o tu agente MCP.
-
-```sh
-export QUALYX_API_TOKEN="$(openssl rand -hex 24)"   # 32+ caracteres imprimibles
-qualyx serve --root /ruta/a/proyectos               # http://127.0.0.1:7878
-```
-
-Abre `http://127.0.0.1:7878`, escribe la ruta de un proyecto dentro de `--root` y el token. El token solo vive en la memoria de esa pestaña.
 
 La [guía bilingüe de equipo](docs/m7/team.md) incluye Compose, credenciales, SDK de Python, cancelación, respaldos y recuperación. Léela antes de desplegar `deploy/team/compose.yaml`.
 
