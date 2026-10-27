@@ -19,7 +19,10 @@ image need no Node. The API serves it with `nosniff`, `no-referrer` and a same-o
   `dashboard_recovers_from_auth_empty_history_and_network_failure` (weak token refused
   client-side, 401, empty history, one passed run, API loss with rows cleared and retry enabled).
   Visual review in Chromium: desktop light/dark, Spanish report dialog, 390 px mobile.
-- CI: new `dashboard` job (typecheck, unit tests, build, drift check of the committed export).
+- CI: new `dashboard` job (typecheck, unit tests, build, and a stale-export check). Webpack chunk
+  hashes differ between Windows and Linux (first CI run 40565140291 failed a byte comparison), so
+  `embed.mjs` records a SHA-256 of the sources (line endings normalized) in
+  `crates/qualyx-api/dashboard/.source-sha256` and `--check` compares it.
 - NOT EXECUTED: Firefox/Safari rendering of the console; there is no `npm run dev` proxy, because
   cross-origin requests are refused by design. Rebuild and use `qualyx serve` to try changes.
 

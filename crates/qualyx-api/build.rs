@@ -11,6 +11,12 @@ fn walk(dir: &Path, files: &mut Vec<PathBuf>) {
         .collect();
     entries.sort();
     for path in entries {
+        if path
+            .file_name()
+            .is_some_and(|n| n.to_string_lossy().starts_with('.'))
+        {
+            continue;
+        }
         if path.is_dir() {
             walk(&path, files);
         } else {

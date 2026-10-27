@@ -24,7 +24,7 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
   # The console is a Next.js static export committed under crates/qualyx-api/dashboard so
-  # cargo builds never need Node. Rebuild it here and fail if the committed copy drifted.
+  # cargo builds never need Node. Build it here and fail if the committed copy is stale.
   dashboard:
     runs-on: ubuntu-latest
     defaults:
@@ -40,9 +40,10 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
+      - run: npx next build --webpack
+      # Webpack chunk hashes vary by OS, so compare the recorded source hash, not the bytes.
       - name: Embedded export matches the sources
-        run: git diff --exit-code --stat -- ../../crates/qualyx-api/dashboard && test -z "$(git status --porcelain -- ../../crates/qualyx-api/dashboard)"
+        run: node scripts/embed.mjs --check
 
   # M1 gate: clean checkout -> install -> run -> report on all three OSes,
   # with the real native toolchains the fixtures need.
