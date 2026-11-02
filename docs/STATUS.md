@@ -1,6 +1,39 @@
 # Status
 
-Last updated: 2026-10-27.
+Last updated: 2026-11-02.
+
+## Optional self-hosted Code Mode — 2026-11-02
+
+Implemented an opt-in Rust host and separate QuickJS-NG container, seven typed capability
+adapters over existing services, progressive search, JavaScript composition, per-operation
+authorization, operator standing approvals for run/cancel, limits, cancellation and audit.
+MCP adds two tools only when enabled; an optional code-only session advertises just those
+two tools. HTTP uses existing bearer/root policies and the existing local or durable team jobs.
+Default behavior and direct tools are preserved. See [guide](code-mode.md),
+[ADR 0007](adr/0007-code-mode.md) and [raw measurements](code-mode-benchmark.json).
+
+EXECUTED on the Windows host with Docker Desktop's Linux engine:
+
+- `cargo fmt --all --check`; strict workspace clippy; strict sandbox-feature clippy
+  (including compiling the optional QuickJS bindings on Windows).
+- `cargo test --workspace --locked`: **188 passed, 0 failed, 3 ignored**. Existing optional
+  external-tool gates are not implied by this count.
+- Actual image build and `python scripts/test_code_mode.py --team`: real raw MCP and
+  authenticated HTTP, live container profile inspection, adversarial denials/limits,
+  concurrency, request cancellation and timeout audit; native pytest seeded failure;
+  real PostgreSQL queue and a separate worker; stored results/artifacts and job cancellation.
+- `python scripts/test_code_mode.py --benchmark --repetitions 3`: 18 measured workflows,
+  0 unexpected errors. Cold containers are substantially slower than direct calls; fetching
+  this entire small catalog also increases model-visible bytes. No universal savings claim.
+- Compose configuration validation and bilingual README generation/drift/link checks.
+
+Local logs are under ignored `artifacts/code-mode-*.log`. Linux CI acceptance was added but
+has **not been executed remotely**. Native Linux/macOS and named agent clients were not
+re-tested here. Context bytes/4 are estimates, not provider token measurements; direct-host
+and Docker daemon CPU/RSS are not measured. There is no new RBAC, hostile multi-tenancy,
+durable interactive approval service, HTTP in-flight code cancellation endpoint or worker pool.
+The native trusted host needs Docker; the supplied team API Compose container receives no
+Docker socket. Code Mode remains disabled unless explicitly configured.
 
 ## Web console (Next.js) — 2026-10-27
 

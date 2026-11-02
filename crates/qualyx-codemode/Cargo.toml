@@ -1,0 +1,36 @@
+[package]
+name = "qualyx-codemode"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+sandbox = ["dep:rquickjs"]
+
+[dependencies]
+anyhow = "1.0.104"
+qualyx-app.workspace = true
+qualyx-core.workspace = true
+qualyx-runners.workspace = true
+qualyx-store.workspace = true
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+schemars = "1.2.3"
+tokio = { version = "1.54.1", features = ["process", "io-util", "time", "sync", "rt"] }
+uuid = { version = "1", features = ["v4"] }
+rquickjs = { version = "0.14.0", optional = true }
+
+[[bin]]
+name = "qualyx-code-sandbox"
+path = "src/sandbox.rs"
+required-features = ["sandbox"]
+
+[dev-dependencies]
+tempfile = "3.27.0"
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

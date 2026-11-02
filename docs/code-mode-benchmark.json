@@ -1,0 +1,302 @@
+{
+  "environment": {
+    "os": "nt",
+    "docker": "29.8.2"
+  },
+  "limitations": [
+    "No model/provider latency or actual model token count.",
+    "CPU ticks and RSS cover sandbox process, not Docker daemon or test worker.",
+    "Small real catalog; no invented thousands of operations.",
+    "Sequential cold containers, warm image cache; throughput is reciprocal workflow latency."
+  ],
+  "measurements": [
+    {
+      "scenario": "simple",
+      "mode": "direct",
+      "latency_ms": 2.872,
+      "schema_bytes": 11103,
+      "visible_bytes": 11495,
+      "token_proxy_bytes_div_4": 2874,
+      "round_trips": 1,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 348.202,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "simple",
+      "mode": "direct",
+      "latency_ms": 1.956,
+      "schema_bytes": 11103,
+      "visible_bytes": 11495,
+      "token_proxy_bytes_div_4": 2874,
+      "round_trips": 1,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 511.143,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "simple",
+      "mode": "direct",
+      "latency_ms": 1.873,
+      "schema_bytes": 11103,
+      "visible_bytes": 11495,
+      "token_proxy_bytes_div_4": 2874,
+      "round_trips": 1,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 533.846,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "simple",
+      "mode": "code",
+      "latency_ms": 917.073,
+      "schema_bytes": 1455,
+      "visible_bytes": 2215,
+      "token_proxy_bytes_div_4": 554,
+      "round_trips": 1,
+      "startup_ms": 443,
+      "dispatch_ms": 10,
+      "workflows_per_second": 1.09,
+      "runtime_metrics": {
+        "cpu_ticks": 3,
+        "js_memory_bytes": 97995,
+        "peak_rss_kib": 3588
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "simple",
+      "mode": "code",
+      "latency_ms": 862.204,
+      "schema_bytes": 1455,
+      "visible_bytes": 2215,
+      "token_proxy_bytes_div_4": 554,
+      "round_trips": 1,
+      "startup_ms": 367,
+      "dispatch_ms": 3,
+      "workflows_per_second": 1.16,
+      "runtime_metrics": {
+        "cpu_ticks": 3,
+        "js_memory_bytes": 97995,
+        "peak_rss_kib": 3680
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "simple",
+      "mode": "code",
+      "latency_ms": 851.167,
+      "schema_bytes": 1455,
+      "visible_bytes": 2215,
+      "token_proxy_bytes_div_4": 554,
+      "round_trips": 1,
+      "startup_ms": 411,
+      "dispatch_ms": 3,
+      "workflows_per_second": 1.175,
+      "runtime_metrics": {
+        "cpu_ticks": 3,
+        "js_memory_bytes": 97995,
+        "peak_rss_kib": 3600
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "dependent",
+      "mode": "direct",
+      "latency_ms": 4.225,
+      "schema_bytes": 11103,
+      "visible_bytes": 11887,
+      "token_proxy_bytes_div_4": 2972,
+      "round_trips": 2,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 236.703,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "dependent",
+      "mode": "direct",
+      "latency_ms": 2.811,
+      "schema_bytes": 11103,
+      "visible_bytes": 11887,
+      "token_proxy_bytes_div_4": 2972,
+      "round_trips": 2,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 355.783,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "dependent",
+      "mode": "direct",
+      "latency_ms": 2.836,
+      "schema_bytes": 11103,
+      "visible_bytes": 11887,
+      "token_proxy_bytes_div_4": 2972,
+      "round_trips": 2,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 352.56,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "dependent",
+      "mode": "code",
+      "latency_ms": 891.08,
+      "schema_bytes": 1455,
+      "visible_bytes": 2215,
+      "token_proxy_bytes_div_4": 554,
+      "round_trips": 1,
+      "startup_ms": 404,
+      "dispatch_ms": 13,
+      "workflows_per_second": 1.122,
+      "runtime_metrics": {
+        "cpu_ticks": 2,
+        "js_memory_bytes": 97995,
+        "peak_rss_kib": 3672
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "dependent",
+      "mode": "code",
+      "latency_ms": 1215.478,
+      "schema_bytes": 1455,
+      "visible_bytes": 2216,
+      "token_proxy_bytes_div_4": 554,
+      "round_trips": 1,
+      "startup_ms": 767,
+      "dispatch_ms": 6,
+      "workflows_per_second": 0.823,
+      "runtime_metrics": {
+        "cpu_ticks": 3,
+        "js_memory_bytes": 97995,
+        "peak_rss_kib": 3608
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "dependent",
+      "mode": "code",
+      "latency_ms": 861.501,
+      "schema_bytes": 1455,
+      "visible_bytes": 2215,
+      "token_proxy_bytes_div_4": 554,
+      "round_trips": 1,
+      "startup_ms": 384,
+      "dispatch_ms": 6,
+      "workflows_per_second": 1.161,
+      "runtime_metrics": {
+        "cpu_ticks": 2,
+        "js_memory_bytes": 97995,
+        "peak_rss_kib": 3684
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "catalog_composition",
+      "mode": "direct",
+      "latency_ms": 10.626,
+      "schema_bytes": 11103,
+      "visible_bytes": 15387,
+      "token_proxy_bytes_div_4": 3847,
+      "round_trips": 3,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 94.112,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "catalog_composition",
+      "mode": "direct",
+      "latency_ms": 9.713,
+      "schema_bytes": 11103,
+      "visible_bytes": 15387,
+      "token_proxy_bytes_div_4": 3847,
+      "round_trips": 3,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 102.958,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "catalog_composition",
+      "mode": "direct",
+      "latency_ms": 9.252,
+      "schema_bytes": 11103,
+      "visible_bytes": 15389,
+      "token_proxy_bytes_div_4": 3848,
+      "round_trips": 3,
+      "startup_ms": null,
+      "dispatch_ms": null,
+      "workflows_per_second": 108.089,
+      "runtime_metrics": null,
+      "errors": 0
+    },
+    {
+      "scenario": "catalog_composition",
+      "mode": "code",
+      "latency_ms": 852.681,
+      "schema_bytes": 1455,
+      "visible_bytes": 19775,
+      "token_proxy_bytes_div_4": 4944,
+      "round_trips": 2,
+      "startup_ms": 374,
+      "dispatch_ms": 21,
+      "workflows_per_second": 1.173,
+      "runtime_metrics": {
+        "cpu_ticks": 2,
+        "js_memory_bytes": 98507,
+        "peak_rss_kib": 3760
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "catalog_composition",
+      "mode": "code",
+      "latency_ms": 819.893,
+      "schema_bytes": 1455,
+      "visible_bytes": 19775,
+      "token_proxy_bytes_div_4": 4944,
+      "round_trips": 2,
+      "startup_ms": 361,
+      "dispatch_ms": 15,
+      "workflows_per_second": 1.22,
+      "runtime_metrics": {
+        "cpu_ticks": 2,
+        "js_memory_bytes": 98507,
+        "peak_rss_kib": 3724
+      },
+      "errors": 0
+    },
+    {
+      "scenario": "catalog_composition",
+      "mode": "code",
+      "latency_ms": 827.308,
+      "schema_bytes": 1455,
+      "visible_bytes": 19775,
+      "token_proxy_bytes_div_4": 4944,
+      "round_trips": 2,
+      "startup_ms": 359,
+      "dispatch_ms": 13,
+      "workflows_per_second": 1.209,
+      "runtime_metrics": {
+        "cpu_ticks": 3,
+        "js_memory_bytes": 98507,
+        "peak_rss_kib": 3760
+      },
+      "errors": 0
+    }
+  ]
+}

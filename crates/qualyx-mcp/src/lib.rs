@@ -39,6 +39,8 @@ the configured roots are allowed.";
 
 #[derive(Clone)]
 pub struct QualyxServer {
+    code_only: bool,
+    code: Option<qualyx_codemode::Host>,
     roots: Roots,
     jobs: Jobs,
     audit: Arc<Mutex<Option<std::fs::File>>>,
@@ -182,6 +184,13 @@ fn tool_error(msg: impl Into<String>) -> Result<CallToolResult, McpError> {
     Ok(CallToolResult::error(vec![ContentBlock::text(msg.into())]))
 }
 
+// Keep bounded Code Mode JSON compact; pretty-printing can multiply output size.
+fn ok_code_json(value: Value) -> Result<CallToolResult, McpError> {
+    Ok(CallToolResult::success(vec![ContentBlock::text(
+        value.to_string(),
+    )]))
+}
+
 /// Small, model-friendly view of a manifest (full detail stays in artifacts).
 pub fn summarize(m: &RunManifest) -> Value {
     let failures: Vec<Value> = m
@@ -222,6 +231,32 @@ pub fn summarize(m: &RunManifest) -> Value {
 impl QualyxServer {
     pub fn new(roots: Vec<PathBuf>) -> std::io::Result<Self> {
         let roots = Roots::new(&roots)?;
+        let jobs = Jobs::new(MAX_CONCURRENT_RUNS);
+        let config = qualyx_codemode::Config::from_env();
+        let code = if config.enabled {
+            Some(
+                qualyx_codemode::Host::new(config, roots.clone(), jobs.clone())
+                    .map_err(std::io::Error::other)?,
+            )
+        } else {
+            None
+        };
+        let code_router = if code.is_some() {
+            Self::code_router()
+        } else {
+            ToolRouter::new()
+        };
+        let code_only = code.is_some() && std::env::var("QUALYX_CODE_ONLY").as_deref() == Ok("1");
+        let tool_router = if code_only {
+            code_router
+        } else {
+            Self::tool_router()
+                + Self::intel_router()
+                + Self::ui_router()
+                + Self::assurance_router()
+                + Self::quality_router()
+                + code_router
+        };
         let audit = roots.list().first().and_then(|r| {
             let dir = r.join(qualyx_store::DIR);
             qualyx_store::Layout { dir: dir.clone() }.ensure().ok()?;
@@ -232,14 +267,12 @@ impl QualyxServer {
                 .ok()
         });
         Ok(QualyxServer {
+            code_only,
+            code,
             roots,
-            jobs: Jobs::new(MAX_CONCURRENT_RUNS),
+            jobs,
             audit: Arc::new(Mutex::new(audit)),
-            tool_router: Self::tool_router()
-                + Self::intel_router()
-                + Self::ui_router()
-                + Self::assurance_router()
-                + Self::quality_router(),
+            tool_router,
         })
     }
 
@@ -266,6 +299,48 @@ impl QualyxServer {
             Err(e) => self.audit(tool, args, "denied", e),
         }
         decision
+    }
+}
+
+#[tool_router(router = code_router)]
+impl QualyxServer {
+    #[tool(
+        description = "Progressively find Code Mode capabilities by text, framework, schema or permission. Returns schemas for a bounded page.",
+        annotations(read_only_hint = true)
+    )]
+    async fn qa_code_search(
+        &self,
+        Parameters(args): Parameters<qualyx_codemode::registry::Search>,
+    ) -> Result<CallToolResult, McpError> {
+        let Some(host) = &self.code else {
+            return tool_error("Code Mode disabled");
+        };
+        match host.search(&args) {
+            Ok(v) => ok_code_json(v),
+            Err(e) => tool_error(e.to_string()),
+        }
+    }
+
+    #[tool(
+        description = "Run a short JavaScript async function body in an isolated sandbox. await qualyx.call(id, input); return JSON. Search schemas with qa_code_search. Read-only unless operator approved each write capability. Tests return async job IDs.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn qa_code_execute(
+        &self,
+        Parameters(args): Parameters<qualyx_codemode::Execute>,
+        context: rmcp::service::RequestContext<rmcp::RoleServer>,
+    ) -> Result<CallToolResult, McpError> {
+        let Some(host) = &self.code else {
+            return tool_error("Code Mode disabled");
+        };
+        tokio::select! {
+            result = host.execute(args) => match result { Ok(v) => ok_code_json(v), Err(e) => tool_error(e.to_string()) },
+            _ = context.ct.cancelled() => tool_error("Code Mode cancelled"),
+        }
     }
 }
 
@@ -788,7 +863,9 @@ impl QualyxServer {
 impl ServerHandler for QualyxServer {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_instructions(INSTRUCTIONS)
+            .with_instructions(if self.code_only {
+                "Use qa_code_search to find capability schemas, then qa_code_execute to compose authorized calls. Test execution returns asynchronous job IDs. Failed, error or inconclusive results are never passes."
+            } else { INSTRUCTIONS })
     }
 }
 

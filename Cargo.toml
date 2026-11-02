@@ -11,6 +11,7 @@ repository = "https://github.com/robgallardof/qualyx"
 authors = ["Roberto Gallardo"]
 
 [workspace.dependencies]
+qualyx-codemode = { path = "crates/qualyx-codemode" }
 qualyx-core = { path = "crates/qualyx-core" }
 qualyx-discovery = { path = "crates/qualyx-discovery" }
 qualyx-runners = { path = "crates/qualyx-runners" }

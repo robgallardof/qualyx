@@ -81,6 +81,13 @@ jobs:
       - name: Team PostgreSQL migrations and project isolation (real container)
         if: matrix.os == 'ubuntu-latest'
         run: cargo test --locked -p qualyx-cli --test team shared_postgres_index -- --ignored --nocapture
+      - name: Code Mode real sandbox, MCP, HTTP and separate team worker (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cargo build --locked -p qualyx-cli
+          docker build -f deploy/code/Dockerfile -t qualyx-code-sandbox:local .
+          python scripts/test_code_mode.py --team
+          python scripts/test_code_mode.py --benchmark --repetitions 3
       - name: Durable team workers and signed S3 evidence (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: python scripts/test_team.py

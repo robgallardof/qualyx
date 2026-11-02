@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "qualyx-code": {
+      "command": "/absolute/path/to/qualyx",
+      "args": ["mcp", "--root", "/absolute/path/to/project"],
+      "env": {
+        "QUALYX_CODE_MODE": "1",
+        "QUALYX_CODE_ONLY": "1",
+        "QUALYX_CODE_IMAGE": "qualyx-code-sandbox:local"
+      }
+    }
+  }
+}

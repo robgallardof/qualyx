@@ -11,6 +11,7 @@ authors.workspace = true
 anyhow = "1.0.104"
 axum = "0.8.9"
 qualyx-app.workspace = true
+qualyx-codemode.workspace = true
 qualyx-core.workspace = true
 qualyx-store.workspace = true
 serde = { version = "1.0.229", features = ["derive"] }

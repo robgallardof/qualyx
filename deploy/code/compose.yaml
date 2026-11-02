@@ -1,0 +1,22 @@
+# Build the optional image with Compose. The trusted native MCP/API host creates
+# disposable containers; this is not a long-running service or Docker socket proxy.
+services:
+  sandbox:
+    image: qualyx-code-sandbox:local
+    build:
+      context: ../..
+      dockerfile: deploy/code/Dockerfile
+    profiles: [code]
+    network_mode: none
+    read_only: true
+    user: "65532:65532"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 16
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.5
+    stdin_open: true
+    ulimits:
+      nofile: {soft: 64, hard: 64}
+      core: {soft: 0, hard: 0}

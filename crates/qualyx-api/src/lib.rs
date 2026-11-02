@@ -26,6 +26,7 @@ const MAX_ARTIFACT_BYTES: usize = 200_000;
 
 #[derive(Clone)]
 struct AppState {
+    code: Option<qualyx_codemode::Host>,
     roots: Roots,
     jobs: Jobs,
     token: Option<String>,
@@ -331,25 +332,74 @@ async fn dashboard(uri: Uri) -> Response {
         .into_response()
 }
 
-fn router(roots: Roots, token: Option<String>, queue_url: Option<String>) -> Router {
+async fn code_search(
+    State(st): State<AppState>,
+    Json(body): Json<qualyx_codemode::registry::Search>,
+) -> Response {
+    let Some(host) = st.code else {
+        return error(StatusCode::NOT_FOUND, "Code Mode disabled");
+    };
+    match host.search(&body) {
+        Ok(value) => Json(value).into_response(),
+        Err(_) => error(StatusCode::BAD_REQUEST, "Code Mode search refused"),
+    }
+}
+
+async fn code_execute(
+    State(st): State<AppState>,
+    Json(body): Json<qualyx_codemode::Execute>,
+) -> Response {
+    let Some(host) = st.code else {
+        return error(StatusCode::NOT_FOUND, "Code Mode disabled");
+    };
+    match host.execute(body).await {
+        Ok(value) => Json(value).into_response(),
+        Err(e) => error(StatusCode::BAD_REQUEST, e.to_string()),
+    }
+}
+
+fn router(
+    roots: Roots,
+    token: Option<String>,
+    queue_url: Option<String>,
+) -> anyhow::Result<Router> {
+    let jobs = Jobs::new(MAX_CONCURRENT_RUNS);
+    let mut config = qualyx_codemode::Config::from_env();
+    config.queue_url = queue_url.clone();
+    let code = if config.enabled {
+        Some(qualyx_codemode::Host::new(
+            config,
+            roots.clone(),
+            jobs.clone(),
+        )?)
+    } else {
+        None
+    };
+    let code_enabled = code.is_some();
     let st = AppState {
+        code,
         roots,
-        jobs: Jobs::new(MAX_CONCURRENT_RUNS),
+        jobs,
         token,
         queue_url,
     };
-    let api = Router::new()
+    let mut api = Router::new()
         .route("/v1/runs", post(start_run).get(list_runs))
         .route("/v1/runs/{id}", get(get_run))
         .route("/v1/runs/{id}/cancel", post(cancel_run))
-        .route("/v1/runs/{id}/artifacts/{name}", get(get_artifact))
-        .route_layer(middleware::from_fn_with_state(st.clone(), auth));
-    Router::new()
+        .route("/v1/runs/{id}/artifacts/{name}", get(get_artifact));
+    if code_enabled {
+        api = api
+            .route("/v1/code/search", post(code_search))
+            .route("/v1/code/execute", post(code_execute));
+    }
+    let api = api.route_layer(middleware::from_fn_with_state(st.clone(), auth));
+    Ok(Router::new()
         .route("/health", get(health))
         .merge(api)
         .fallback(get(dashboard))
         .layer(DefaultBodyLimit::max(16_384))
-        .with_state(st)
+        .with_state(st))
 }
 
 /// Validate credentials and roots, then serve until interrupted.
@@ -378,7 +428,7 @@ pub fn serve(cfg: ApiConfig) -> anyhow::Result<()> {
     } else {
         None
     };
-    let app = router(roots, cfg.token.filter(|t| !t.is_empty()), queue_url);
+    let app = router(roots, cfg.token.filter(|t| !t.is_empty()), queue_url)?;
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?;
