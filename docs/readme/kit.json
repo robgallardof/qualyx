@@ -13,9 +13,9 @@
        "text": {"en": "Every run stores the commands, versions, commit, exit codes, native reports and logs, with SHA-256 checks.",
                 "es": "Cada ejecución guarda comandos, versiones, commit, códigos de salida, reportes nativos y logs, con SHA-256."}},
       {"title": {"en": "Agents over MCP", "es": "Agentes por MCP"}, "icon": "bot", "kicker": "MCP",
-       "href": "#agents", "tags": ["Claude Code", "Codex"],
-       "text": {"en": "Discover, run, triage and verify from your agent. Reads are marked read-only; running asks first.",
-                "es": "Descubre, ejecuta, analiza y verifica desde tu agente. Las lecturas son de solo lectura; ejecutar pide permiso."}},
+       "href": "#agents", "tags": ["MCP", "Code Mode"],
+       "text": {"en": "Use direct tools or compose capabilities in isolated JavaScript. The host checks each call; test jobs use existing runners.",
+                "es": "Usa herramientas directas o compón capacidades en JavaScript aislado. Qualyx autoriza cada llamada y usa los runners existentes."}},
       {"title": {"en": "Web console", "es": "Consola web"}, "icon": "chart", "kicker": {"en": "History", "es": "Historial"}, "badge": {"en": "New", "es": "Nuevo"},
        "href": "#console", "tags": ["Next.js"],
        "text": {"en": "A read-only console embedded in the binary: run history, filters, reports, light and dark, English and Spanish.",
@@ -29,10 +29,13 @@
       {"title": {"en": "Analysis", "es": "Análisis"}, "icon": "search",
        "items": ["qa_analyze_failure", "qa_flaky", "qa_test_impact", "qa_review"]},
       {"title": {"en": "Adapters", "es": "Adaptadores"}, "icon": "shield",
-       "items": ["qa_browser_session", "qa_desktop_session", "qa_performance_run", "qa_security_scan"]}
+       "items": ["qa_browser_session", "qa_desktop_session", "qa_performance_run", "qa_security_scan"]},
+      {"title": {"en": "Code Mode (when enabled)", "es": "Code Mode (al activarlo)"}, "icon": "bot",
+       "items": ["qa_code_search", "qa_code_execute"]}
     ]},
     {"id": "agent-links", "type": "buttons", "items": [
       {"label": {"en": "Client matrix", "es": "Matriz de clientes"}, "href": "docs/m2/clients.md", "icon": "check", "variant": "primary", "trailing": true},
+      {"label": {"en": "Code Mode setup", "es": "Activar Code Mode"}, "href": "docs/code-mode.md", "icon": "terminal", "small": true},
       {"label": {"en": "Security audit skill", "es": "Skill de auditoría"}, "href": "docs/m5/security-audit.md", "icon": "shield", "small": true},
       {"label": {"en": "Status", "es": "Estado"}, "href": "docs/STATUS.md", "icon": "layers", "small": true}
     ]}

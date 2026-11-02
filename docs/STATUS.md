@@ -2,6 +2,27 @@
 
 Last updated: 2026-11-02.
 
+## MCP reinstall and workflow documentation — 2026-11-02
+
+Reinstalled the optimized CLI from this checkout with `cargo install --path
+crates/qualyx-cli --locked --force`, rebuilt the sandbox image, and changed the ignored
+project-local Codex entry from the development binary to the installed executable.
+Code Mode remains explicitly enabled locally, with run/cancel grants scoped to the
+configured root; no machine-specific configuration is committed. A real MCP session
+using that configuration listed the two Code Mode tools and executed ecosystem discovery
+inside the sandbox successfully. The version string remains 0.1.0.
+
+Updated both README sources, generated assets and capability panels with installed-binary
+setup, activation variables, standing approvals and the Code Mode tools. Refreshed the native
+first-check workflows and added source-backed Code Mode workflows in English/Spanish,
+with light/dark SVG exports. Archify finalize gates passed for all four specifications;
+all eight exports were visually inspected. The generated README proof sheet loaded all
+104 images without broken assets or horizontal overflow at 1440px and 390px.
+Readme Builder drift and link checks passed (three documents, zero findings).
+Fresh workspace fmt/clippy/test passed: 188 tests, zero failures, three ignored.
+This verifies local installation and generated assets, not a new named-agent end-to-end
+run or GitHub's final Markdown rendering.
+
 ## Optional self-hosted Code Mode — 2026-11-02
 
 Implemented an opt-in Rust host and separate QuickJS-NG container, seven typed capability

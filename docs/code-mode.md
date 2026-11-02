@@ -14,6 +14,25 @@ cargo build -p qualyx-cli --locked
 docker build -f deploy/code/Dockerfile -t qualyx-code-sandbox:local .
 ```
 
+To reinstall an optimized binary from the current checkout, run:
+
+```sh
+cargo install --path crates/qualyx-cli --locked --force
+```
+
+Point the MCP entry's `command` at the installed binary in `~/.cargo/bin/` (`qualyx.exe`
+on Windows). Rebuild the sandbox image with the command above after runtime changes,
+then restart the MCP server in the client. `--version` remains the workspace version;
+reinstalling a newer source revision does not itself change that version string.
+Codex accepts project-scoped `.codex/config.toml` in a trusted checkout. Keep local
+absolute paths and standing approvals out of commits. See the
+[official MCP configuration guide](https://learn.chatgpt.com/docs/extend/mcp).
+
+The [Code Mode workflow](../assets/readme/diagrams/code-mode-en.archify.json) and its
+[Spanish counterpart](../assets/readme/diagrams/code-mode-es.archify.json) are editable
+Archify sources. The README shows exported light/dark SVGs; the flow describes the full
+job lifecycle across later polling/result requests, not a single blocked JavaScript program.
+
 Compose can build the same image with `docker compose -f deploy/code/compose.yaml --profile code build`.
 It has no socket or project mount. Do not add a Docker socket to the existing team API.
 An MCP configuration example is in [deploy/code/mcp.example.json](../deploy/code/mcp.example.json).

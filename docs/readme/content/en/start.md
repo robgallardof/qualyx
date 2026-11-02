@@ -17,7 +17,7 @@ qualyx test path/to/project
 qualyx report path/to/project
 ```
 
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-en-dark.svg" /><img src="assets/readme/diagrams/first-check-en-light.svg" alt="Qualyx workflow: install, discover tests, run native tools, keep the evidence, review the result" width="100%" /></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-en-dark.svg" /><img src="assets/readme/diagrams/first-check-en-light.svg" alt="Qualyx workflow: install, discover ecosystems, run native tools, keep the evidence, review the result" width="100%" /></picture></p>
 
 For a small real example, install Python and pytest, then run `qualyx test fixtures/python/passing`. The companion `fixtures/python/failing` deliberately fails. Tests execute project code: use repositories you trust.
 

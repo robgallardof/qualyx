@@ -12,3 +12,25 @@ python -m readme_builder preview ../qualyx --output ../qualyx/target/readme-prev
 ```
 
 The ownership manifest detects manual drift. The initial migration used `--force` to adopt the existing READMEs; subsequent builds should not require it. Assets are static, with light/dark variants. Essential instructions remain normal Markdown. No external image rendering service is required.
+
+## Archify workflows
+
+Editable workflow specifications live under `assets/readme/diagrams/`:
+`first-check-{en,es}.archify.json` and `code-mode-{en,es}.archify.json`.
+The first check covers native discovery/execution/evidence. The Code Mode flow adds
+progressive search, isolated composition, host authorization and asynchronous jobs.
+Every node cites the source at the specification's pinned repository revision.
+
+Use Archify 3.2.0 to regenerate each diagram from the repository root, replacing
+`<archify>` with its installed `bin/archify.mjs` path and `<name>` with a stem above:
+
+```sh
+node <archify> finalize workflow assets/readme/diagrams/<name>.archify.json .archify/readme-20261102/<name>.html --repo-root . --quality showcase --json
+```
+
+Keep `meta.output` and the output argument aligned when choosing another local artifact
+folder. `finalize` validates repository provenance, renders HTML, checks the artifact and
+runs its real-browser layout gate. In the resulting viewer, use canonical `svg-light`
+and `svg-dark` exports, saving them as `<name>-light.svg` and `<name>-dark.svg` beside
+the source. Do not hand-edit exported SVGs. Regenerate both READMEs after updating their
+sources or kit. Preserve the Archify and font license notices in that directory.

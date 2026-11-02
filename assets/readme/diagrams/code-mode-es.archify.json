@@ -1,0 +1,186 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Code Mode: componer en local, ejecutar con Qualyx",
+    "locale": "es",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/robgallardof/qualyx.git",
+      "revision": "593486bcab76fd6b9322216a6119d22f503d5919"
+    },
+    "output": ".archify/readme-20261102/code-mode-es.html"
+  },
+  "lanes": [
+    {
+      "id": "agent",
+      "label": "Agente / cliente MCP"
+    },
+    {
+      "id": "sandbox",
+      "label": "JavaScript aislado"
+    },
+    {
+      "id": "host",
+      "label": "Qualyx en tu equipo"
+    },
+    {
+      "id": "jobs",
+      "label": "Trabajos y evidencia existentes"
+    }
+  ],
+  "mainPath": [
+    "search",
+    "compose",
+    "javascript",
+    "authorize",
+    "run",
+    "evidence",
+    "review"
+  ],
+  "nodes": [
+    {
+      "id": "search",
+      "lane": "agent",
+      "col": 0,
+      "type": "backend",
+      "label": "Buscar capacidades",
+      "sublabel": "qa_code_search",
+      "sources": [
+        {
+          "path": "crates/qualyx-codemode/src/registry.rs"
+        }
+      ]
+    },
+    {
+      "id": "compose",
+      "lane": "agent",
+      "col": 1,
+      "type": "external",
+      "label": "Componer llamadas",
+      "sublabel": "qa_code_execute",
+      "sources": [
+        {
+          "path": "crates/qualyx-mcp/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "id": "javascript",
+      "lane": "sandbox",
+      "col": 2,
+      "type": "backend",
+      "label": "Ejecutar JavaScript",
+      "sublabel": "Sin red ni montajes",
+      "sources": [
+        {
+          "path": "crates/qualyx-codemode/src/sandbox.rs"
+        }
+      ]
+    },
+    {
+      "id": "authorize",
+      "lane": "host",
+      "col": 3,
+      "type": "security",
+      "label": "Autorizar cada llamada",
+      "sublabel": "Directorios + permisos",
+      "sources": [
+        {
+          "path": "crates/qualyx-codemode/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "id": "denied",
+      "lane": "host",
+      "col": 4,
+      "type": "security",
+      "label": "Rechazar operación",
+      "sublabel": "Sin permiso o acceso",
+      "sources": [
+        {
+          "path": "crates/qualyx-codemode/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "id": "run",
+      "lane": "jobs",
+      "col": 4,
+      "type": "backend",
+      "label": "Enviar trabajo nativo",
+      "sublabel": "run_id asíncrono; runners",
+      "sources": [
+        {
+          "path": "crates/qualyx-app/src/jobs.rs"
+        }
+      ]
+    },
+    {
+      "id": "evidence",
+      "lane": "jobs",
+      "col": 5,
+      "type": "database",
+      "label": "Guardar evidencia",
+      "sublabel": "Almacenamiento existente",
+      "sources": [
+        {
+          "path": "crates/qualyx-app/src/lib.rs"
+        }
+      ]
+    },
+    {
+      "id": "review",
+      "lane": "agent",
+      "col": 5,
+      "type": "frontend",
+      "label": "Consultar resultados luego",
+      "sublabel": "Estado, fallos, artefactos",
+      "sources": [
+        {
+          "path": "crates/qualyx-codemode/src/lib.rs"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "flow0",
+      "from": "search",
+      "to": "compose"
+    },
+    {
+      "id": "flow1",
+      "from": "compose",
+      "to": "javascript"
+    },
+    {
+      "id": "flow2",
+      "from": "javascript",
+      "to": "authorize"
+    },
+    {
+      "id": "flow3",
+      "from": "authorize",
+      "to": "run"
+    },
+    {
+      "id": "flow4",
+      "from": "run",
+      "to": "evidence"
+    },
+    {
+      "id": "flow5",
+      "from": "evidence",
+      "to": "review"
+    },
+    {
+      "id": "deny",
+      "from": "authorize",
+      "to": "denied",
+      "variant": "security",
+      "role": "error"
+    }
+  ]
+}

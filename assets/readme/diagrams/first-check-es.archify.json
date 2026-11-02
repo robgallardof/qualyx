@@ -7,9 +7,9 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/robgallardof/qualyx.git",
-      "revision": "de9b8852ffaaf34cf1bc4dbd2d4c929ef8b89b45"
+      "revision": "593486bcab76fd6b9322216a6119d22f503d5919"
     },
-    "output": ".archify/first-check-es-20261027-164829/diagram.html"
+    "output": ".archify/readme-20261102/first-check-es.html"
   },
   "lanes": [
     {
@@ -47,7 +47,7 @@
       "lane": "qualyx",
       "col": 1,
       "type": "backend",
-      "label": "Encontrar pruebas",
+      "label": "Detectar ecosistemas",
       "sublabel": "qualyx discover",
       "sources": [
         {

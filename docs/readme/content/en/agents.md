@@ -18,6 +18,22 @@ Pass `--root` more than once to allow several projects. Read tools are marked re
 
 Optional [self-hosted Code Mode](docs/code-mode.md) adds progressive capability search and isolated JavaScript composition over the same jobs. It is disabled by default, requires a local Linux container engine, and grants read-only access until the operator explicitly approves write capabilities. Direct tools remain available.
 
+To install or update from this checkout, run `cargo install --path crates/qualyx-cli --locked --force`, then build the sandbox with `docker build -f deploy/code/Dockerfile -t qualyx-code-sandbox:local .`. Point your MCP entry at the installed binary (`~/.cargo/bin/qualyx`, or `qualyx.exe` on Windows), rather than `target/debug`.
+
+Add these variables to that MCP entry's `env`, then restart the server in your client:
+
+```json
+{
+  "QUALYX_CODE_MODE": "1",
+  "QUALYX_CODE_ONLY": "1",
+  "QUALYX_CODE_IMAGE": "qualyx-code-sandbox:local"
+}
+```
+
+This advertises `qa_code_search` and `qa_code_execute`. To approve test submission and cancellation for the configured roots, the operator can also set `QUALYX_CODE_APPROVALS=tests.run,tests.cancel`. Leave `QUALYX_CODE_ONLY` unset to keep direct tools in the same session. Codex supports a trusted project's `.codex/config.toml`; keep machine-specific paths and approvals local. See the [configuration and examples](docs/code-mode.md).
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/code-mode-en-dark.svg" /><img src="assets/readme/diagrams/code-mode-en-light.svg" alt="Code Mode: discover capabilities, compose isolated JavaScript, authorize each call, submit existing asynchronous jobs and retrieve evidence later; unauthorized calls are refused" width="100%" /></picture></p>
+
 <!-- kit:tools -->
 <!-- /kit:tools -->
 

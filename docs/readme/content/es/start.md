@@ -17,7 +17,7 @@ qualyx test ruta/al/proyecto
 qualyx report ruta/al/proyecto
 ```
 
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-es-dark.svg" /><img src="assets/readme/diagrams/first-check-es-light.svg" alt="Flujo de Qualyx: instalar, encontrar pruebas, correr herramientas nativas, guardar evidencia y revisar el resultado" width="100%" /></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-es-dark.svg" /><img src="assets/readme/diagrams/first-check-es-light.svg" alt="Flujo de Qualyx: instalar, detectar ecosistemas, correr herramientas nativas, guardar evidencia y revisar el resultado" width="100%" /></picture></p>
 
 Para un ejemplo real pequeño, instala Python y pytest y ejecuta `qualyx test fixtures/python/passing`. El proyecto `fixtures/python/failing` falla intencionalmente. Las pruebas ejecutan código del proyecto: usa repositorios de confianza.
 

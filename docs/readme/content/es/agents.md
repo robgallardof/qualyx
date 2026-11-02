@@ -18,6 +18,22 @@ Pasa `--root` varias veces para permitir varios proyectos. Las herramientas de l
 
 El [Code Mode autoalojado](docs/code-mode.md) opcional permite descubrir capacidades y componer llamadas mediante JavaScript aislado sobre los mismos trabajos. Está desactivado por defecto, requiere un motor local de contenedores Linux y solo permite lectura hasta que el administrador apruebe capacidades de escritura. Las herramientas directas siguen disponibles.
 
+Para instalar o actualizar desde este repositorio, ejecuta `cargo install --path crates/qualyx-cli --locked --force` y construye el contenedor con `docker build -f deploy/code/Dockerfile -t qualyx-code-sandbox:local .`. Apunta la entrada MCP al binario instalado (`~/.cargo/bin/qualyx`, o `qualyx.exe` en Windows), en lugar de `target/debug`.
+
+Agrega estas variables al campo `env` de esa entrada MCP y reinicia el servidor en tu cliente:
+
+```json
+{
+  "QUALYX_CODE_MODE": "1",
+  "QUALYX_CODE_ONLY": "1",
+  "QUALYX_CODE_IMAGE": "qualyx-code-sandbox:local"
+}
+```
+
+Esto anuncia `qa_code_search` y `qa_code_execute`. Para aprobar el envío y la cancelación de pruebas en los directorios configurados, el administrador puede agregar `QUALYX_CODE_APPROVALS=tests.run,tests.cancel`. Omite `QUALYX_CODE_ONLY` para conservar las herramientas directas en la misma sesión. Codex admite `.codex/config.toml` en proyectos de confianza; conserva las rutas del equipo y los permisos en local. Consulta la [configuración y los ejemplos](docs/code-mode.md).
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/code-mode-es-dark.svg" /><img src="assets/readme/diagrams/code-mode-es-light.svg" alt="Code Mode: buscar capacidades, componer JavaScript aislado, autorizar cada llamada, enviar trabajos asíncronos existentes y consultar la evidencia después; las llamadas sin permiso se rechazan" width="100%" /></picture></p>
+
 <!-- kit:tools -->
 <!-- /kit:tools -->
 

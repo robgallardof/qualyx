@@ -20,7 +20,7 @@
 Qualyx discovers a project's tests, runs its native tools and preserves the evidence. Use it from a terminal, an MCP agent or a shared API, and look back at the results in a web console. **Deterministic execution needs no AI model.**
 
 <!-- kit:why -->
-<p align="center"><a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-01-dark.svg" /><img src="assets/readme-builder/kit/why-en-01-light.svg" alt="Native tools: Finds the tests and runs them with the project&#x27;s own runner. No AI model is needed to execute." width="49%" /></picture></a><a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-02-dark.svg" /><img src="assets/readme-builder/kit/why-en-02-light.svg" alt="Evidence kept: Every run stores the commands, versions, commit, exit codes, native reports and logs, with SHA-256 checks." width="49%" /></picture></a><a href="#agents"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-03-dark.svg" /><img src="assets/readme-builder/kit/why-en-03-light.svg" alt="Agents over MCP: Discover, run, triage and verify from your agent. Reads are marked read-only; running asks first." width="49%" /></picture></a><a href="#console"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-04-dark.svg" /><img src="assets/readme-builder/kit/why-en-04-light.svg" alt="Web console: A read-only console embedded in the binary: run history, filters, reports, light and dark, English and Spanish." width="49%" /></picture></a></p>
+<p align="center"><a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-01-dark.svg" /><img src="assets/readme-builder/kit/why-en-01-light.svg" alt="Native tools: Finds the tests and runs them with the project&#x27;s own runner. No AI model is needed to execute." width="49%" /></picture></a><a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-02-dark.svg" /><img src="assets/readme-builder/kit/why-en-02-light.svg" alt="Evidence kept: Every run stores the commands, versions, commit, exit codes, native reports and logs, with SHA-256 checks." width="49%" /></picture></a><a href="#agents"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-03-dark.svg" /><img src="assets/readme-builder/kit/why-en-03-light.svg" alt="Agents over MCP: Use direct tools or compose capabilities in isolated JavaScript. The host checks each call; test jobs use existing runners." width="49%" /></picture></a><a href="#console"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-en-04-dark.svg" /><img src="assets/readme-builder/kit/why-en-04-light.svg" alt="Web console: A read-only console embedded in the binary: run history, filters, reports, light and dark, English and Spanish." width="49%" /></picture></a></p>
 <!-- /kit:why -->
 
 Core workflows are verified within the [documented scope](docs/STATUS.md); the [full roadmap remains incomplete](docs/READINESS.md). CI validates Windows, Linux and macOS, including real browsers and installation smoke tests. For a downloaded binary, follow [native installation](INSTALL.md).
@@ -37,7 +37,7 @@ qualyx test path/to/project
 qualyx report path/to/project
 ```
 
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-en-dark.svg" /><img src="assets/readme/diagrams/first-check-en-light.svg" alt="Qualyx workflow: install, discover tests, run native tools, keep the evidence, review the result" width="100%" /></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-en-dark.svg" /><img src="assets/readme/diagrams/first-check-en-light.svg" alt="Qualyx workflow: install, discover ecosystems, run native tools, keep the evidence, review the result" width="100%" /></picture></p>
 
 For a small real example, install Python and pytest, then run `qualyx test fixtures/python/passing`. The companion `fixtures/python/failing` deliberately fails. Tests execute project code: use repositories you trust.
 
@@ -101,16 +101,33 @@ Pass `--root` more than once to allow several projects. Read tools are marked re
 
 Optional [self-hosted Code Mode](docs/code-mode.md) adds progressive capability search and isolated JavaScript composition over the same jobs. It is disabled by default, requires a local Linux container engine, and grants read-only access until the operator explicitly approves write capabilities. Direct tools remain available.
 
+To install or update from this checkout, run `cargo install --path crates/qualyx-cli --locked --force`, then build the sandbox with `docker build -f deploy/code/Dockerfile -t qualyx-code-sandbox:local .`. Point your MCP entry at the installed binary (`~/.cargo/bin/qualyx`, or `qualyx.exe` on Windows), rather than `target/debug`.
+
+Add these variables to that MCP entry's `env`, then restart the server in your client:
+
+```json
+{
+  "QUALYX_CODE_MODE": "1",
+  "QUALYX_CODE_ONLY": "1",
+  "QUALYX_CODE_IMAGE": "qualyx-code-sandbox:local"
+}
+```
+
+This advertises `qa_code_search` and `qa_code_execute`. To approve test submission and cancellation for the configured roots, the operator can also set `QUALYX_CODE_APPROVALS=tests.run,tests.cancel`. Leave `QUALYX_CODE_ONLY` unset to keep direct tools in the same session. Codex supports a trusted project's `.codex/config.toml`; keep machine-specific paths and approvals local. See the [configuration and examples](docs/code-mode.md).
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/code-mode-en-dark.svg" /><img src="assets/readme/diagrams/code-mode-en-light.svg" alt="Code Mode: discover capabilities, compose isolated JavaScript, authorize each call, submit existing asynchronous jobs and retrieve evidence later; unauthorized calls are refused" width="100%" /></picture></p>
+
 <!-- kit:tools -->
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/tools-en-dark.svg" /><img src="assets/readme-builder/kit/tools-en-light.svg" alt="Discover and run: qa_capabilities, qa_discover, qa_doctor, qa_run, qa_run_status, qa_cancel · Evidence: qa_report, qa_list_runs, qa_get_artifact, qa_verify · Analysis: qa_analyze_failure, qa_flaky, qa_test_impact, qa_review · Adapters: qa_browser_session, qa_desktop_session, qa_performance_run, qa_security_scan" width="100%" /></picture></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/tools-en-dark.svg" /><img src="assets/readme-builder/kit/tools-en-light.svg" alt="Discover and run: qa_capabilities, qa_discover, qa_doctor, qa_run, qa_run_status, qa_cancel · Evidence: qa_report, qa_list_runs, qa_get_artifact, qa_verify · Analysis: qa_analyze_failure, qa_flaky, qa_test_impact, qa_review · Adapters: qa_browser_session, qa_desktop_session, qa_performance_run, qa_security_scan · Code Mode (when enabled): qa_code_search, qa_code_execute" width="100%" /></picture></p>
 <!-- /kit:tools -->
 
 The repository also ships a [security audit skill](.agents/skills/qualyx-security-audit/SKILL.md) that clients reading `.agents/skills` pick up. No global agent configuration is edited. AI-assisted features stay optional.
 
 <!-- kit:agent-links -->
 <p align="center"><a href="docs/m2/clients.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-en-01-dark.svg" /><img src="assets/readme-builder/kit/agent-links-en-01-light.svg" alt="Client matrix" height="44" /></picture></a>&nbsp;
-<a href="docs/m5/security-audit.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-en-02-dark.svg" /><img src="assets/readme-builder/kit/agent-links-en-02-light.svg" alt="Security audit skill" height="34" /></picture></a>&nbsp;
-<a href="docs/STATUS.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-en-03-dark.svg" /><img src="assets/readme-builder/kit/agent-links-en-03-light.svg" alt="Status" height="34" /></picture></a></p>
+<a href="docs/code-mode.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-en-02-dark.svg" /><img src="assets/readme-builder/kit/agent-links-en-02-light.svg" alt="Code Mode setup" height="34" /></picture></a>&nbsp;
+<a href="docs/m5/security-audit.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-en-03-dark.svg" /><img src="assets/readme-builder/kit/agent-links-en-03-light.svg" alt="Security audit skill" height="34" /></picture></a>&nbsp;
+<a href="docs/STATUS.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-en-04-dark.svg" /><img src="assets/readme-builder/kit/agent-links-en-04-light.svg" alt="Status" height="34" /></picture></a></p>
 <!-- /kit:agent-links -->
 
 <p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
