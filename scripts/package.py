@@ -19,7 +19,8 @@ def stage_documentation(package):
                            capture_output=True).stdout.decode().split("\0")
     roots = {"LICENSE-MIT", "LICENSE-APACHE", "README.md", "README.es.md", "SECURITY.md",
              "AGENTS.md", "CONTRIBUTING.md", "readme.json", ".readme-builder-manifest.json"}
-    prefixes = ("docs/", "assets/", ".agents/skills/", "sdk/python/", ".github/workflows/")
+    prefixes = ("docs/", "assets/", ".agents/skills/", "sdk/python/", ".github/workflows/",
+                "deploy/code/")
     for name in files:
         if name in roots or name.startswith(prefixes):
             destination = package / name
