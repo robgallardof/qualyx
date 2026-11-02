@@ -26,3 +26,4 @@ web/dashboard/*.tsbuildinfo
 web/dashboard/next-env.d.ts
 web/dashboard/playwright-report/
 web/dashboard/test-results/
+.archify/

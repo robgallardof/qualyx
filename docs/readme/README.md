@@ -2,7 +2,7 @@
 
 English and Spanish sources live in `content/`; links are relative to the generated repository-root README. Edit sources, not generated READMEs or assets.
 
-Use Python 3.11+ and [Readme Builder](https://github.com/robgallardof/readme-builder) revision `ac565123d25081b2bb8b1158f387b5fb43323cb6`. This retains the showcase presentation adopted by the README. From that clone, with Qualyx checked out beside it:
+Use Python 3.11+ and [Readme Builder](https://github.com/robgallardof/readme-builder) revision `77d458bf46977e7bd7ac1da430c483838cc5e4e5`. This retains the showcase presentation adopted by the README. From that clone, with Qualyx checked out beside it:
 
 ```sh
 python -m readme_builder build ../qualyx/readme.json --output ../qualyx

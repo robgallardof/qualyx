@@ -8,7 +8,7 @@
 
 <p align="center"><a href="#start"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-ejecuta-tu-primera-prueba-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-ejecuta-tu-primera-prueba-outline-sm-light.svg" alt="Ejecuta tu primera prueba" height="34" /></picture></a>&nbsp;
 <a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-resultados-que-puedes-revisar-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-resultados-que-puedes-revisar-outline-sm-light.svg" alt="Resultados que puedes revisar" height="34" /></picture></a>&nbsp;
-<a href="#agents"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-usalo-con-tu-agente-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-usalo-con-tu-agente-outline-sm-light.svg" alt="Úsalo con tu agente" height="34" /></picture></a></p>
+<a href="#agents"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-instalacion-retirada-y-compatibilidad-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-instalacion-retirada-y-compatibilidad-outline-sm-light.svg" alt="Instalación, retirada y compatibilidad" height="34" /></picture></a></p>
 
 <p align="center"><a href="README.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-english-outline-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-english-outline-sm-light.svg" alt="English" height="34" /></picture></a>&nbsp;
 <a href="README.es.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/btn-espanol-primary-sm-dark.svg" /><img src="assets/readme-builder/kit/btn-espanol-primary-sm-light.svg" alt="Español" height="34" /></picture></a></p>
@@ -18,6 +18,10 @@
 ## <img src="assets/readme-builder/icons/rocket.svg" width="24" height="24" alt="" /> Ejecuta tu primera prueba
 
 Qualyx descubre las pruebas de un proyecto, ejecuta sus herramientas nativas y conserva la evidencia. Úsalo desde la terminal, un agente MCP o una API compartida, y revisa los resultados en una consola web. **La ejecución determinista no necesita un modelo de IA.**
+
+<!-- kit:why -->
+<p align="center"><a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-es-01-dark.svg" /><img src="assets/readme-builder/kit/why-es-01-light.svg" alt="Herramientas nativas: Encuentra las pruebas y las corre con el runner del propio proyecto. No necesita un modelo de IA para ejecutar." width="49%" /></picture></a><a href="#evidence"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-es-02-dark.svg" /><img src="assets/readme-builder/kit/why-es-02-light.svg" alt="Evidencia guardada: Cada ejecución guarda comandos, versiones, commit, códigos de salida, reportes nativos y logs, con SHA-256." width="49%" /></picture></a><a href="#agents"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-es-03-dark.svg" /><img src="assets/readme-builder/kit/why-es-03-light.svg" alt="Agentes por MCP: Descubre, ejecuta, analiza y verifica desde tu agente. Las lecturas son de solo lectura; ejecutar pide permiso." width="49%" /></picture></a><a href="#console"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/why-es-04-dark.svg" /><img src="assets/readme-builder/kit/why-es-04-light.svg" alt="Consola web: Una consola de solo lectura dentro del binario: historial, filtros, reportes, claro y oscuro, inglés y español." width="49%" /></picture></a></p>
+<!-- /kit:why -->
 
 Los flujos principales están verificados con el [alcance documentado](docs/STATUS.md); el [plan completo sigue pendiente](docs/READINESS.md). CI valida Windows, Linux y macOS, incluidos navegadores reales y pruebas de instalación. Para un binario descargado, sigue la [instalación nativa](INSTALL.md).
 
@@ -32,6 +36,8 @@ qualyx discover ruta/al/proyecto
 qualyx test ruta/al/proyecto
 qualyx report ruta/al/proyecto
 ```
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-es-dark.svg" /><img src="assets/readme/diagrams/first-check-es-light.svg" alt="Flujo de Qualyx: instalar, encontrar pruebas, correr herramientas nativas, guardar evidencia y revisar el resultado" width="100%" /></picture></p>
 
 Para un ejemplo real pequeño, instala Python y pytest y ejecuta `qualyx test fixtures/python/passing`. El proyecto `fixtures/python/failing` falla intencionalmente. Las pruebas ejecutan código del proyecto: usa repositorios de confianza.
 
@@ -73,17 +79,39 @@ Las [auditorías de seguridad](docs/m5/security-audit.md) incluyen cobertura exp
 
 <a id="agents"></a>
 
-## <img src="assets/readme-builder/icons/bot.svg" width="24" height="24" alt="" /> Úsalo con tu agente
+## <img src="assets/readme-builder/icons/bot.svg" width="24" height="24" alt="" /> Instalación, retirada y compatibilidad
 
-Genera una configuración, revísala y agrégala a tu cliente:
+Qualyx corre como servidor MCP local (`qualyx mcp --root <dir>`, stdio). `qualyx mcp-config <cliente>` imprime la entrada exacta para tu cliente; no escribe nada por ti, así que puedes revisarla antes de agregarla.
+
+| Cliente | Imprimir la entrada | Dónde va | Quitarla | Probado |
+|---|---|---|---|---|
+| Claude Code | `qualyx mcp-config claude --root <dir>` | `.mcp.json`, o `claude mcp add qualyx -- …` | `claude mcp remove qualyx` | Verificado en 2.1.311 |
+| Codex CLI | `qualyx mcp-config codex --root <dir>` | `~/.codex/config.toml` | Borra la tabla `[mcp_servers.qualyx]` | Verificado en 0.164.0 |
+| OpenCode | `qualyx mcp-config opencode --root <dir>` | `opencode.json` | Borra `mcp.qualyx` | Solo se genera, sin probar |
+| Cursor | `qualyx mcp-config cursor --root <dir>` | `.cursor/mcp.json` | Borra `mcpServers.qualyx` | Solo se genera, sin probar |
+| VS Code | `qualyx mcp-config vscode --root <dir>` | `.vscode/mcp.json` | Borra `servers.qualyx` | Solo se genera, sin probar |
+| Cualquier cliente MCP | `qualyx mcp-config generic --root <dir>` | El `mcpServers` del cliente | Borra `mcpServers.qualyx` | Pruebas JSON-RPC en CI |
 
 ```sh
-qualyx mcp-config codex --root /ruta/absoluta/al/proyecto
+qualyx mcp-config claude --root /ruta/absoluta/al/proyecto   # revisa y pega o corre el comando impreso
+claude mcp list                                              # qualyx debe aparecer conectado
 ```
 
-El servidor se inicia con `qualyx mcp --root /ruta/absoluta/al/proyecto`. MCP permite descubrir proyectos, ejecutar pruebas y consultar evidencia. Generar una configuración no demuestra compatibilidad: consulta versiones verificadas y clientes pendientes en la [matriz de clientes](docs/m2/clients.md), incluidos Claude Code, Codex, Cursor y OpenCode.
+Pasa `--root` varias veces para permitir varios proyectos. Las herramientas de lectura están marcadas como de solo lectura: los clientes que respetan esas marcas pueden aprobarlas solos y pedir permiso antes de `qa_run`, que ejecuta el código del proyecto.
 
-Las funciones asistidas por IA son opcionales. Mantén los permisos explícitos: ejecutar pruebas implica ejecutar código del proyecto.
+El [Code Mode autoalojado](docs/code-mode.md) opcional permite descubrir capacidades y componer llamadas mediante JavaScript aislado sobre los mismos trabajos. Está desactivado por defecto, requiere un motor local de contenedores Linux y solo permite lectura hasta que el administrador apruebe capacidades de escritura. Las herramientas directas siguen disponibles.
+
+<!-- kit:tools -->
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/tools-es-dark.svg" /><img src="assets/readme-builder/kit/tools-es-light.svg" alt="Descubrir y ejecutar: qa_capabilities, qa_discover, qa_doctor, qa_run, qa_run_status, qa_cancel · Evidencia: qa_report, qa_list_runs, qa_get_artifact, qa_verify · Análisis: qa_analyze_failure, qa_flaky, qa_test_impact, qa_review · Adaptadores: qa_browser_session, qa_desktop_session, qa_performance_run, qa_security_scan" width="100%" /></picture></p>
+<!-- /kit:tools -->
+
+El repositorio incluye una [skill de auditoría de seguridad](.agents/skills/qualyx-security-audit/SKILL.md) que detectan los clientes que leen `.agents/skills`. No se edita ninguna configuración global de agentes. Las funciones con IA siguen siendo opcionales.
+
+<!-- kit:agent-links -->
+<p align="center"><a href="docs/m2/clients.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-es-01-dark.svg" /><img src="assets/readme-builder/kit/agent-links-es-01-light.svg" alt="Matriz de clientes" height="44" /></picture></a>&nbsp;
+<a href="docs/m5/security-audit.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-es-02-dark.svg" /><img src="assets/readme-builder/kit/agent-links-es-02-light.svg" alt="Skill de auditoría" height="34" /></picture></a>&nbsp;
+<a href="docs/STATUS.md"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme-builder/kit/agent-links-es-03-dark.svg" /><img src="assets/readme-builder/kit/agent-links-es-03-light.svg" alt="Estado" height="34" /></picture></a></p>
+<!-- /kit:agent-links -->
 
 <p align="center"><img src="assets/readme-builder/kit/wave.svg" alt="" width="100%" /></p>
 

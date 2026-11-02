@@ -1,6 +1,7 @@
 {
   "version": 1,
   "name": "Qualyx",
+  "kit": "docs/readme/kit.json",
   "theme": "ocean",
   "motion": "off",
   "documents": [
@@ -27,7 +28,7 @@
         },
         {
           "id": "agents",
-          "title": "Use it with your agent",
+          "title": "Agent setup, removal and compatibility",
           "icon": "bot",
           "stage": "use",
           "source": "docs/readme/content/en/agents.md"
@@ -78,7 +79,7 @@
         },
         {
           "id": "agents",
-          "title": "Úsalo con tu agente",
+          "title": "Instalación, retirada y compatibilidad",
           "icon": "bot",
           "stage": "use",
           "source": "docs/readme/content/es/agents.md"

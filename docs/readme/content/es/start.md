@@ -1,5 +1,8 @@
 Qualyx descubre las pruebas de un proyecto, ejecuta sus herramientas nativas y conserva la evidencia. Úsalo desde la terminal, un agente MCP o una API compartida, y revisa los resultados en una consola web. **La ejecución determinista no necesita un modelo de IA.**
 
+<!-- kit:why -->
+<!-- /kit:why -->
+
 Los flujos principales están verificados con el [alcance documentado](docs/STATUS.md); el [plan completo sigue pendiente](docs/READINESS.md). CI valida Windows, Linux y macOS, incluidos navegadores reales y pruebas de instalación. Para un binario descargado, sigue la [instalación nativa](INSTALL.md).
 
 Instala Git y Rust estable, además de las herramientas nativas de tu proyecto:
@@ -13,6 +16,8 @@ qualyx discover ruta/al/proyecto
 qualyx test ruta/al/proyecto
 qualyx report ruta/al/proyecto
 ```
+
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/readme/diagrams/first-check-es-dark.svg" /><img src="assets/readme/diagrams/first-check-es-light.svg" alt="Flujo de Qualyx: instalar, encontrar pruebas, correr herramientas nativas, guardar evidencia y revisar el resultado" width="100%" /></picture></p>
 
 Para un ejemplo real pequeño, instala Python y pytest y ejecuta `qualyx test fixtures/python/passing`. El proyecto `fixtures/python/failing` falla intencionalmente. Las pruebas ejecutan código del proyecto: usa repositorios de confianza.
 
